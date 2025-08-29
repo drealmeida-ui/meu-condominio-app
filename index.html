@@ -342,6 +342,7 @@
                 showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
+                console.log("Documento adicionado com sucesso.");
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
                 showError("Erro ao registrar o pagamento. Tente novamente.");
@@ -355,6 +356,7 @@
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
+                console.log("Documento removido com sucesso.");
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
                 showError("Erro ao deletar o pagamento.");
@@ -384,13 +386,13 @@
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
                         
-                        // AQUI ESTÁ A MUDANÇA PRINCIPAL: Usamos onSnapshot para ouvir em tempo real
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                        onSnapshot(paymentsCol, (snapshot) => {
+                        const unsubscribe = onSnapshot(paymentsCol, (snapshot) => {
                             const payments = [];
                             snapshot.forEach(doc => {
                                 payments.push({ id: doc.id, ...doc.data() });
                             });
+                            console.log("Dados recebidos em tempo real. Total de pagamentos:", payments.length);
                             renderPayments(payments);
                             updateTotals(payments);
                             hideLoading();
@@ -403,7 +405,12 @@
                     } else {
                         console.log("Usuário não autenticado. Iniciando o processo de login.");
                         if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (e) {
+                                console.error("Erro ao autenticar com token:", e);
+                                showError("Erro de autenticação. Verifique as configurações.");
+                            }
                         } else {
                             await signInAnonymously(auth);
                         }
