@@ -364,15 +364,12 @@
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
-                showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
                 await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
                 showError("Erro ao registrar o pagamento. Tente novamente.");
-            } finally {
-                hideLoading();
             }
         }
 
@@ -425,6 +422,8 @@
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
 
+                        showLoading();
+
                         const unitNumber = document.getElementById('unitNumber').value;
                         const unitType = document.getElementById('unitType').value;
                         const paymentType = document.getElementById('paymentType').value;
@@ -450,6 +449,8 @@
 
                         paymentForm.reset();
                         document.getElementById('paymentYear').value = new Date().getFullYear();
+
+                        hideLoading();
                     });
                 } else {
                     console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
