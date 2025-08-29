@@ -214,10 +214,9 @@
                 snapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
-                setTimeout(() => {
-                    renderPayments(payments);
-                    updateTotals(payments);
-                }, 100);
+                // Chamamos a função de renderização diretamente, sem o setTimeout
+                renderPayments(payments);
+                updateTotals(payments);
             }, (error) => {
                 console.error("Erro ao carregar pagamentos:", error);
                 showError("Erro ao carregar dados. Verifique sua conexão.");
