@@ -156,7 +156,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -182,6 +182,7 @@
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
         let db;
+        let isAuthReady = false;
 
         // Exibe uma mensagem de erro na tela
         function showError(message) {
@@ -201,8 +202,8 @@
 
         // Função para iniciar o listener de dados em tempo real
         function startDataListener() {
-            if (!db) {
-                console.warn("DB não disponível, listener não pode ser iniciado.");
+            if (!isAuthReady || !db) {
+                console.warn("Autenticação não pronta ou DB não disponível, listener não pode ser iniciado.");
                 return;
             }
 
@@ -401,15 +402,22 @@
                     paymentYearInput.value = new Date().getFullYear();
                 }
 
-                // Autenticação anônima é necessária para acessar o banco de dados público
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                // Usamos onAuthStateChanged para garantir que a autenticação esteja pronta
+                // antes de tentar se conectar ao Firestore.
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        isAuthReady = true;
+                        startDataListener();
+                    } else {
+                        // Se não estiver logado, faz a autenticação inicial
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
                 
-                startDataListener();
-
                 const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
