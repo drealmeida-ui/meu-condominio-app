@@ -72,8 +72,8 @@
         </div>
 
         <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
-            <p class="text-sm font-medium text-gray-500 mb-2">ID do Usuário (Compartilhe com a equipe):</p>
-            <p id="userIdDisplay" class="text-sm font-mono bg-gray-200 px-3 py-1 rounded-md overflow-hidden overflow-ellipsis break-all"></p>
+            <p class="text-sm font-medium text-gray-500 mb-2">ID do Aplicativo (Compartilhe com a equipe):</p>
+            <p id="appIdDisplay" class="text-sm font-mono bg-gray-200 px-3 py-1 rounded-md overflow-hidden overflow-ellipsis break-all"></p>
         </div>
         
         <!-- Formulário para Registrar Pagamentos -->
@@ -161,7 +161,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -187,8 +187,6 @@
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
         let db;
-        let auth;
-        let userId = '';
 
         // Exibe uma mensagem de erro na tela
         function showError(message) {
@@ -208,12 +206,13 @@
 
         // Função para iniciar o listener de dados em tempo real
         function startDataListener() {
-            if (!db || !userId) {
-                console.warn("DB ou UserID não disponível, listener não pode ser iniciado.");
+            if (!db) {
+                console.warn("DB não disponível, listener não pode ser iniciado.");
                 return;
             }
 
-            const paymentsCol = collection(db, `artifacts/${appId}/users/${userId}/payments`);
+            // O caminho da coleção agora é público, usando o ID do aplicativo
+            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
             const paymentsQuery = query(paymentsCol);
 
             onSnapshot(paymentsQuery, (snapshot) => {
@@ -359,7 +358,7 @@
                 if (loadingMessage) {
                     loadingMessage.classList.remove('hidden');
                 }
-                const paymentsCol = collection(db, `artifacts/${appId}/users/${userId}/payments`);
+                const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
                 if (loadingMessage) {
                     loadingMessage.classList.add('hidden');
@@ -381,7 +380,7 @@
                 if (loadingMessage) {
                     loadingMessage.classList.remove('hidden');
                 }
-                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/payments`, docId));
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
                 if (loadingMessage) {
                     loadingMessage.classList.add('hidden');
                 }
@@ -400,7 +399,7 @@
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
+                const auth = getAuth(app);
                 db = getFirestore(app);
 
                 /*
@@ -416,57 +415,51 @@
                     await signInAnonymously(auth);
                 }
 
-                // Espera o estado de autenticação mudar
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        const userIdDisplay = document.getElementById('userIdDisplay');
-                        if (userIdDisplay) {
-                           userIdDisplay.innerText = userId;
-                        }
-                        startDataListener();
+                // O ID do aplicativo agora é o identificador para a coleção pública.
+                const appIdDisplay = document.getElementById('appIdDisplay');
+                if (appIdDisplay) {
+                   appIdDisplay.innerText = appId;
+                }
+                
+                startDataListener();
 
-                        // Adiciona o listener do formulário AQUI, após o userId estar definido
-                        const paymentForm = document.getElementById('paymentForm');
-                        if (paymentForm) {
-                            paymentForm.addEventListener('submit', async (e) => {
-                                e.preventDefault();
+                // Adiciona o listener do formulário
+                const paymentForm = document.getElementById('paymentForm');
+                if (paymentForm) {
+                    paymentForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
 
-                                const unitNumber = document.getElementById('unitNumber').value;
-                                const unitType = document.getElementById('unitType').value;
-                                const paymentType = document.getElementById('paymentType').value;
-                                const paymentMonth = document.getElementById('paymentMonth').value;
-                                const paymentYear = document.getElementById('paymentYear').value;
-                                const rateioPaid = document.getElementById('rateioPaid').checked;
+                        const unitNumber = document.getElementById('unitNumber').value;
+                        const unitType = document.getElementById('unitType').value;
+                        const paymentType = document.getElementById('paymentType').value;
+                        const paymentMonth = document.getElementById('paymentMonth').value;
+                        const paymentYear = document.getElementById('paymentYear').value;
+                        const rateioPaid = document.getElementById('rateioPaid').checked;
 
-                                const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                                const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
+                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
 
-                                const newPayment = {
-                                    unidade: unitNumber,
-                                    tipoUnidade: unitType,
-                                    tipoPagamento: paymentType,
-                                    mes: paymentMonth,
-                                    ano: paymentYear,
-                                    valorReceita: valorReceita,
-                                    valorRateio: valorRateio,
-                                    dataRegistro: new Date()
-                                };
+                        const newPayment = {
+                            unidade: unitNumber,
+                            tipoUnidade: unitType,
+                            tipoPagamento: paymentType,
+                            mes: paymentMonth,
+                            ano: paymentYear,
+                            valorReceita: valorReceita,
+                            valorRateio: valorRateio,
+                            dataRegistro: new Date()
+                        };
 
-                                await addPayment(newPayment);
+                        await addPayment(newPayment);
 
-                                // Limpar formulário
-                                paymentForm.reset();
-                                // Resetar o ano para o ano atual após o registro
-                                document.getElementById('paymentYear').value = new Date().getFullYear();
-                            });
-                        } else {
-                            console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
-                        }
-                    } else {
-                        showError("Usuário não autenticado. Não foi possível carregar os dados.");
-                    }
-                });
+                        // Limpar formulário
+                        paymentForm.reset();
+                        // Resetar o ano para o ano atual após o registro
+                        document.getElementById('paymentYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                }
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
