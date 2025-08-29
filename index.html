@@ -24,6 +24,11 @@
         .text-shadow-custom {
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
+        .tab-button.active {
+            background-color: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 sm:p-8">
@@ -139,18 +144,22 @@
             </form>
         </div>
 
-        <!-- Tabela de Pagamentos Registrados -->
+        <!-- Seção de Pagamentos Registrados com Abas e Tabela -->
         <div class="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="p-6 bg-gray-50 border-b-2 border-gray-200">
                 <h2 class="text-2xl font-bold text-gray-800">Pagamentos Registrados</h2>
             </div>
-            <div class="p-6">
-                <!-- AVISO: A mensagem abaixo foi movida para fora do contêiner da lista -->
-                <p id="noPaymentsMessage" class="text-center text-gray-500 hidden">Nenhum pagamento registrado ainda.</p>
-                <div id="paymentsList" class="space-y-4">
-                    <!-- Pagamentos serão inseridos aqui pelo JavaScript -->
-                </div>
+            
+            <p id="noPaymentsMessage" class="text-center text-gray-500 p-6 hidden">Nenhum pagamento registrado ainda.</p>
+            
+            <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
+                <!-- Abas dos meses serão inseridas aqui pelo JS -->
             </div>
+            
+            <div id="paymentsTableContainer" class="p-4 overflow-x-auto">
+                <!-- Tabelas de pagamentos serão inseridas aqui pelo JS -->
+            </div>
+            
         </div>
     </div>
 
@@ -185,6 +194,7 @@
 
         let db;
         let isAuthReady = false;
+        let currentActiveTab = '';
 
         // Exibe uma mensagem de erro na tela
         function showError(message) {
@@ -218,22 +228,29 @@
             }
         }
 
+        // Função para formatar um número para moeda BRL
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+        
         // Função que renderiza os pagamentos na UI
         function renderPayments(payments) {
-            const listContainer = document.getElementById('paymentsList');
             const noPaymentsMessage = document.getElementById('noPaymentsMessage');
+            const tabsContainer = document.getElementById('tabsContainer');
+            const tableContainer = document.getElementById('paymentsTableContainer');
             
-            // Verificação extra para garantir que os elementos existem
-            if (!listContainer || !noPaymentsMessage) {
-                console.error("Erro fatal: Elementos da UI 'paymentsList' ou 'noPaymentsMessage' não encontrados.");
+            if (!noPaymentsMessage || !tabsContainer || !tableContainer) {
+                console.error("Erro fatal: Elementos da UI não encontrados.");
                 showError("Erro de carregamento. Por favor, recarregue a página.");
                 return;
             }
 
-            listContainer.innerHTML = '';
-            
+            tabsContainer.innerHTML = '';
+            tableContainer.innerHTML = '';
+
             if (payments.length === 0) {
                 noPaymentsMessage.classList.remove('hidden');
+                return;
             } else {
                 noPaymentsMessage.classList.add('hidden');
             }
@@ -253,65 +270,103 @@
                 const [monthA, yearA] = a.split(' de ');
                 const [monthB, yearB] = b.split(' de ');
                 
-                if (yearA !== yearB) {
+                if (parseInt(yearA) !== parseInt(yearB)) {
                     return parseInt(yearB) - parseInt(yearA);
                 }
                 
                 return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
             });
 
+            // Cria as abas e o conteúdo da tabela
             sortedMonths.forEach(monthYear => {
-                const monthPayments = groupedPayments[monthYear];
-                let monthlyReceita = 0;
-                let monthlyRateio = 0;
+                // Cria o botão da aba
+                const tabButton = document.createElement('button');
+                tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg hover:bg-blue-50 transition-colors";
+                tabButton.textContent = monthYear;
+                tabButton.setAttribute('data-target', `tab-${monthYear.replace(/\s+/g, '-')}`);
+                tabsContainer.appendChild(tabButton);
 
-                const monthSection = document.createElement('div');
-                monthSection.className = "mb-6";
+                // Cria o contêiner da tabela para esta aba
+                const tableContent = document.createElement('div');
+                tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
+                tableContent.className = "tab-content hidden";
+                
+                // Cria a tabela
+                const table = document.createElement('table');
+                table.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
+                
+                table.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Taxa</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rateio</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                `;
 
-                const monthHeader = document.createElement('h3');
-                monthHeader.className = "text-xl font-bold text-gray-800 border-b-2 border-gray-200 pb-2 mb-4";
-                monthHeader.innerText = monthYear;
-                monthSection.appendChild(monthHeader);
-
-                monthPayments.forEach(payment => {
-                    monthlyReceita += payment.valorReceita;
-                    monthlyRateio += payment.valorRateio;
-                    const card = document.createElement('div');
-                    card.className = "bg-white p-4 rounded-xl shadow-sm border-2 border-gray-100 flex items-center justify-between transition-transform duration-200 hover:scale-[1.02] mb-2";
+                // Adiciona as linhas da tabela
+                const tableBody = table.querySelector('tbody');
+                groupedPayments[monthYear].forEach(payment => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-50 transition-colors";
                     
-                    const receita = payment.valorReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    const rateio = payment.valorRateio > 0 ? payment.valorRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Não';
-                    
-                    card.innerHTML = `
-                        <div>
-                            <p class="font-bold text-gray-900">${payment.unidade}</p>
-                            <p class="text-sm text-gray-600">${payment.tipoUnidade} - ${payment.tipoPagamento === 'A_Vista' ? 'À Vista' : 'Normal'}</p>
-                            <p class="text-sm text-gray-500 mt-1">
-                                Receita: <span class="text-blue-600 font-semibold">${receita}</span>
-                            </p>
-                            <p class="text-sm text-gray-500">
-                                Rateio: <span class="text-purple-600 font-semibold">${rateio}</span>
-                            </p>
-                        </div>
-                        <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                        </button>
+                    const receita = formatCurrency(payment.valorReceita);
+                    const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoUnidade}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'À Vista' : 'Normal'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </td>
                     `;
-                    monthSection.appendChild(card);
+                    tableBody.appendChild(row);
                 });
 
-                const monthlyTotalsCard = document.createElement('div');
-                monthlyTotalsCard.className = "bg-gray-100 p-4 rounded-xl shadow-inner border-2 border-gray-200 mt-4";
-                monthlyTotalsCard.innerHTML = `
-                    <p class="text-sm font-semibold text-gray-700">Totais do Mês:</p>
-                    <p class="text-base text-blue-600 font-bold">Receita: ${monthlyReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                    <p class="text-base text-purple-600 font-bold">Rateio: ${monthlyRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                    <p class="text-lg text-green-600 font-extrabold mt-2">Total: ${(monthlyReceita + monthlyRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                `;
-                monthSection.appendChild(monthlyTotalsCard);
-                listContainer.appendChild(monthSection);
+                tableContent.appendChild(table);
+                tableContainer.appendChild(tableContent);
+            });
+            
+            // Ativa a primeira aba (mais recente) por padrão
+            const firstTabButton = tabsContainer.querySelector('.tab-button');
+            if (firstTabButton) {
+                firstTabButton.classList.add('active');
+                const targetId = firstTabButton.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+                currentActiveTab = targetId;
+            }
+
+            // Adiciona o listener para a troca de abas
+            tabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-button')) {
+                    const targetId = e.target.getAttribute('data-target');
+
+                    // Esconde a aba anterior
+                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
+                        document.getElementById(currentActiveTab).classList.add('hidden');
+                    }
+                    
+                    // Remove a classe 'active' de todos os botões de aba
+                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+                    // Mostra a nova aba e ativa o botão
+                    document.getElementById(targetId).classList.remove('hidden');
+                    e.target.classList.add('active');
+                    currentActiveTab = targetId;
+                }
             });
         }
 
