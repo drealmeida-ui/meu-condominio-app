@@ -158,7 +158,7 @@
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
@@ -217,32 +217,29 @@
             }
         }
 
-        // Função para iniciar o listener de dados em tempo real
-        function startDataListener() {
+        // Nova função para buscar e renderizar os pagamentos
+        async function fetchAndRenderPayments() {
             if (!isAuthReady || !db) {
-                console.warn("Autenticação não pronta ou DB não disponível, listener não pode ser iniciado.");
+                console.warn("Autenticação não pronta ou DB não disponível.");
                 return;
             }
 
-            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-            const paymentsQuery = query(paymentsCol);
-
-            // O onSnapshot é a função do Firestore que "ouve" as mudanças no banco de dados em tempo real.
-            // Quando um documento é adicionado, modificado ou excluído, essa função é executada novamente,
-            // garantindo que a lista seja sempre atualizada automaticamente.
-            onSnapshot(paymentsQuery, (snapshot) => {
+            showLoading();
+            try {
+                const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+                const snapshot = await getDocs(paymentsCol);
                 let payments = [];
                 snapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
                 renderPayments(payments);
                 updateTotals(payments);
-                // Esconde a mensagem de carregamento somente após os dados serem atualizados
-                hideLoading();
-            }, (error) => {
+            } catch (error) {
                 console.error("Erro ao carregar pagamentos:", error);
                 showError("Erro ao carregar dados. Verifique sua conexão.");
-            });
+            } finally {
+                hideLoading();
+            }
         }
 
         // Função para renderizar os pagamentos na UI
@@ -370,10 +367,12 @@
                 showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
+                await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
-                hideLoading();
                 showError("Erro ao registrar o pagamento. Tente novamente.");
+            } finally {
+                hideLoading();
             }
         }
 
@@ -382,10 +381,12 @@
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
+                await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
-                hideLoading();
                 showError("Erro ao deletar o pagamento.");
+            } finally {
+                hideLoading();
             }
         };
 
@@ -403,12 +404,12 @@
                     paymentYearInput.value = new Date().getFullYear();
                 }
 
-                // Autentica o usuário e, após o login, inicia o listener
+                // Autentica o usuário e, após o login, inicia a busca de dados
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         isAuthReady = true;
-                        console.log("Usuário autenticado. Iniciando listener de dados.");
-                        startDataListener();
+                        console.log("Usuário autenticado. Buscando dados iniciais.");
+                        await fetchAndRenderPayments();
                     } else {
                         console.log("Usuário não autenticado. Iniciando o processo de login.");
                         if (initialAuthToken) {
