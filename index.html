@@ -209,12 +209,14 @@
             const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
             const paymentsQuery = query(paymentsCol);
 
+            // O onSnapshot é a função do Firestore que "ouve" as mudanças no banco de dados em tempo real.
+            // Quando um documento é adicionado, modificado ou excluído, essa função é executada novamente,
+            // garantindo que a lista seja sempre atualizada automaticamente.
             onSnapshot(paymentsQuery, (snapshot) => {
                 let payments = [];
                 snapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
-                // Chamamos a função de renderização diretamente, sem o setTimeout
                 renderPayments(payments);
                 updateTotals(payments);
             }, (error) => {
