@@ -158,7 +158,7 @@
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
@@ -217,29 +217,7 @@
             }
         }
 
-        // Função para buscar e renderizar os pagamentos
-        async function fetchAndRenderPayments() {
-            if (!isAuthReady || !db) {
-                console.warn("Autenticação não pronta ou DB não disponível.");
-                return;
-            }
-
-            try {
-                const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                const snapshot = await getDocs(paymentsCol);
-                let payments = [];
-                snapshot.forEach(doc => {
-                    payments.push({ id: doc.id, ...doc.data() });
-                });
-                renderPayments(payments);
-                updateTotals(payments);
-            } catch (error) {
-                console.error("Erro ao carregar pagamentos:", error);
-                showError("Erro ao carregar dados. Verifique sua conexão.");
-            }
-        }
-
-        // Função para renderizar os pagamentos na UI
+        // Função que renderiza os pagamentos na UI
         function renderPayments(payments) {
             const listContainer = document.getElementById('paymentsList');
             const noPaymentsMessage = document.getElementById('noPaymentsMessage');
@@ -364,8 +342,6 @@
                 showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
-                console.log("Documento adicionado. Atualizando lista...");
-                await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
                 showError("Erro ao registrar o pagamento. Tente novamente.");
@@ -379,8 +355,6 @@
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
-                console.log("Documento removido. Atualizando lista...");
-                await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
                 showError("Erro ao deletar o pagamento.");
@@ -403,12 +377,29 @@
                     paymentYearInput.value = new Date().getFullYear();
                 }
 
-                // Autentica o usuário e, após o login, inicia a busca de dados
+                // Autentica o usuário e, após o login, inicia a escuta em tempo real
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         isAuthReady = true;
-                        console.log("Usuário autenticado. Buscando dados iniciais.");
-                        await fetchAndRenderPayments();
+                        console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
+                        showLoading();
+                        
+                        // AQUI ESTÁ A MUDANÇA PRINCIPAL: Usamos onSnapshot para ouvir em tempo real
+                        const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+                        onSnapshot(paymentsCol, (snapshot) => {
+                            const payments = [];
+                            snapshot.forEach(doc => {
+                                payments.push({ id: doc.id, ...doc.data() });
+                            });
+                            renderPayments(payments);
+                            updateTotals(payments);
+                            hideLoading();
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações:", error);
+                            showError("Erro de sincronização com o banco de dados.");
+                            hideLoading();
+                        });
+
                     } else {
                         console.log("Usuário não autenticado. Iniciando o processo de login.");
                         if (initialAuthToken) {
