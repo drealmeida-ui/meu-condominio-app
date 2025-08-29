@@ -183,6 +183,7 @@
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
         let db;
+        let isAuthReady = false;
 
         // Exibe uma mensagem de erro na tela
         function showError(message) {
@@ -199,12 +200,27 @@
                 errorElement.classList.remove('hidden');
             }
         }
+        
+        // Função para mostrar a mensagem de carregamento
+        function showLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.classList.remove('hidden');
+            }
+        }
+        
+        // Função para esconder a mensagem de carregamento
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.classList.add('hidden');
+            }
+        }
 
         // Função para iniciar o listener de dados em tempo real
         function startDataListener() {
-            if (!db) {
-                console.error("Erro: A referência do banco de dados (db) não está disponível.");
-                showError("Erro interno. A conexão com o banco de dados falhou.");
+            if (!isAuthReady || !db) {
+                console.warn("Autenticação não pronta ou DB não disponível, listener não pode ser iniciado.");
                 return;
             }
 
@@ -214,15 +230,15 @@
             // O onSnapshot é a função do Firestore que "ouve" as mudanças no banco de dados em tempo real.
             // Quando um documento é adicionado, modificado ou excluído, essa função é executada novamente,
             // garantindo que a lista seja sempre atualizada automaticamente.
-            console.log("Iniciando o listener de tempo real para pagamentos.");
             onSnapshot(paymentsQuery, (snapshot) => {
                 let payments = [];
                 snapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
-                console.log("Dados de pagamentos recebidos. Atualizando a UI.");
                 renderPayments(payments);
                 updateTotals(payments);
+                // Esconde a mensagem de carregamento somente após os dados serem atualizados
+                hideLoading();
             }, (error) => {
                 console.error("Erro ao carregar pagamentos:", error);
                 showError("Erro ao carregar dados. Verifique sua conexão.");
@@ -351,21 +367,12 @@
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
-                const loadingMessage = document.getElementById('loadingMessage');
-                if (loadingMessage) {
-                    loadingMessage.classList.remove('hidden');
-                }
+                showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
-                if (loadingMessage) {
-                    loadingMessage.classList.add('hidden');
-                }
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
-                const loadingMessage = document.getElementById('loadingMessage');
-                if (loadingMessage) {
-                    loadingMessage.classList.add('hidden');
-                }
+                hideLoading();
                 showError("Erro ao registrar o pagamento. Tente novamente.");
             }
         }
@@ -373,20 +380,11 @@
         // Função para deletar um pagamento
         window.deletePayment = async (docId) => {
             try {
-                const loadingMessage = document.getElementById('loadingMessage');
-                if (loadingMessage) {
-                    loadingMessage.classList.remove('hidden');
-                }
+                showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
-                if (loadingMessage) {
-                    loadingMessage.classList.add('hidden');
-                }
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
-                const loadingMessage = document.getElementById('loadingMessage');
-                if (loadingMessage) {
-                    loadingMessage.classList.add('hidden');
-                }
+                hideLoading();
                 showError("Erro ao deletar o pagamento.");
             }
         };
@@ -408,6 +406,7 @@
                 // Autentica o usuário e, após o login, inicia o listener
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        isAuthReady = true;
                         console.log("Usuário autenticado. Iniciando listener de dados.");
                         startDataListener();
                     } else {
