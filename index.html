@@ -145,9 +145,10 @@
                 <h2 class="text-2xl font-bold text-gray-800">Pagamentos Registrados</h2>
             </div>
             <div class="p-6">
+                <!-- AVISO: A mensagem abaixo foi movida para fora do contêiner da lista -->
+                <p id="noPaymentsMessage" class="text-center text-gray-500 hidden">Nenhum pagamento registrado ainda.</p>
                 <div id="paymentsList" class="space-y-4">
                     <!-- Pagamentos serão inseridos aqui pelo JavaScript -->
-                    <p id="noPaymentsMessage" class="text-center text-gray-500">Nenhum pagamento registrado ainda.</p>
                 </div>
             </div>
         </div>
@@ -222,8 +223,10 @@
             const listContainer = document.getElementById('paymentsList');
             const noPaymentsMessage = document.getElementById('noPaymentsMessage');
             
+            // Verificação extra para garantir que os elementos existem
             if (!listContainer || !noPaymentsMessage) {
-                console.error("Erro: Elementos da UI não encontrados. O DOM pode não ter sido totalmente carregado.");
+                console.error("Erro fatal: Elementos da UI 'paymentsList' ou 'noPaymentsMessage' não encontrados.");
+                showError("Erro de carregamento. Por favor, recarregue a página.");
                 return;
             }
 
