@@ -180,7 +180,7 @@
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
@@ -434,6 +434,21 @@
             try {
                 showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+
+                // Verifica se já existe um pagamento para a mesma unidade, mês e ano
+                const q = query(paymentsCol, 
+                    where("unidade", "==", paymentData.unidade),
+                    where("mes", "==", paymentData.mes),
+                    where("ano", "==", paymentData.ano)
+                );
+                
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    showError(`Pagamento para a unidade ${paymentData.unidade} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`);
+                    return;
+                }
+
                 await addDoc(paymentsCol, paymentData);
                 console.log("Documento adicionado com sucesso.");
             } catch (error) {
