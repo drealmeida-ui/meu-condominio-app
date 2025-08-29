@@ -70,11 +70,6 @@
                 <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
         </div>
-
-        <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
-            <p class="text-sm font-medium text-gray-500 mb-2">ID do Aplicativo (Compartilhe com a equipe):</p>
-            <p id="appIdDisplay" class="text-sm font-mono bg-gray-200 px-3 py-1 rounded-md overflow-hidden overflow-ellipsis break-all"></p>
-        </div>
         
         <!-- Formulário para Registrar Pagamentos -->
         <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200">
@@ -410,11 +405,6 @@
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
-                }
-
-                const appIdDisplay = document.getElementById('appIdDisplay');
-                if (appIdDisplay) {
-                   appIdDisplay.innerText = appId;
                 }
                 
                 startDataListener();
