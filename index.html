@@ -127,7 +127,7 @@
                 <!-- Campo de Ano do Pagamento -->
                 <div>
                     <label for="paymentYear" class="block text-gray-700 font-semibold mb-1">Ano</label>
-                    <input type="number" id="paymentYear" required value="${new Date().getFullYear()}" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    <input type="number" id="paymentYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
                 </div>
 
                 <!-- Checkbox de Rateio -->
@@ -211,7 +211,6 @@
                 return;
             }
 
-            // O caminho da coleção agora é público, usando o ID do aplicativo
             const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
             const paymentsQuery = query(paymentsCol);
 
@@ -220,8 +219,6 @@
                 snapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
-                // Atraso intencional para garantir que o DOM seja totalmente renderizado
-                // antes de tentar manipular os elementos da UI
                 setTimeout(() => {
                     renderPayments(payments);
                     updateTotals(payments);
@@ -402,20 +399,19 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
 
-                /*
-                 * PASSO 2: AUTENTICAÇÃO E COLEÇÃO DO BANCO DE DADOS
-                 * ===============================================
-                 * A autenticação anônima é ativada por padrão e é segura para este exemplo.
-                 * No seu projeto do Firebase, você precisará configurar as regras do Firestore
-                 * para permitir que usuários anônimos gravem dados.
-                 */
+                // Preenche o campo de ano com o ano atual
+                const paymentYearInput = document.getElementById('paymentYear');
+                if (paymentYearInput) {
+                    paymentYearInput.value = new Date().getFullYear();
+                }
+
+                // Autenticação anônima é necessária para acessar o banco de dados público
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
 
-                // O ID do aplicativo agora é o identificador para a coleção pública.
                 const appIdDisplay = document.getElementById('appIdDisplay');
                 if (appIdDisplay) {
                    appIdDisplay.innerText = appId;
@@ -423,7 +419,6 @@
                 
                 startDataListener();
 
-                // Adiciona o listener do formulário
                 const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
@@ -433,7 +428,7 @@
                         const unitType = document.getElementById('unitType').value;
                         const paymentType = document.getElementById('paymentType').value;
                         const paymentMonth = document.getElementById('paymentMonth').value;
-                        const paymentYear = document.getElementById('paymentYear').value;
+                        const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
 
                         const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
@@ -452,9 +447,7 @@
 
                         await addPayment(newPayment);
 
-                        // Limpar formulário
                         paymentForm.reset();
-                        // Resetar o ano para o ano atual após o registro
                         document.getElementById('paymentYear').value = new Date().getFullYear();
                     });
                 } else {
@@ -467,7 +460,6 @@
             }
         }
 
-        // Iniciar a aplicação quando o DOM estiver completamente carregado
         document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
