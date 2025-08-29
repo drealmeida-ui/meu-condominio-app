@@ -217,14 +217,13 @@
             }
         }
 
-        // Nova função para buscar e renderizar os pagamentos
+        // Função para buscar e renderizar os pagamentos
         async function fetchAndRenderPayments() {
             if (!isAuthReady || !db) {
                 console.warn("Autenticação não pronta ou DB não disponível.");
                 return;
             }
 
-            showLoading();
             try {
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 const snapshot = await getDocs(paymentsCol);
@@ -237,8 +236,6 @@
             } catch (error) {
                 console.error("Erro ao carregar pagamentos:", error);
                 showError("Erro ao carregar dados. Verifique sua conexão.");
-            } finally {
-                hideLoading();
             }
         }
 
@@ -364,12 +361,16 @@
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
+                showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                 await addDoc(paymentsCol, paymentData);
+                console.log("Documento adicionado. Atualizando lista...");
                 await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
                 showError("Erro ao registrar o pagamento. Tente novamente.");
+            } finally {
+                hideLoading();
             }
         }
 
@@ -378,6 +379,7 @@
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
+                console.log("Documento removido. Atualizando lista...");
                 await fetchAndRenderPayments();
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
@@ -422,8 +424,6 @@
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
 
-                        showLoading();
-
                         const unitNumber = document.getElementById('unitNumber').value;
                         const unitType = document.getElementById('unitType').value;
                         const paymentType = document.getElementById('paymentType').value;
@@ -449,8 +449,6 @@
 
                         paymentForm.reset();
                         document.getElementById('paymentYear').value = new Date().getFullYear();
-
-                        hideLoading();
                     });
                 } else {
                     console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
