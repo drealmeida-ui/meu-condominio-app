@@ -161,10 +161,9 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
         const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : null);
@@ -419,48 +418,48 @@
                            userIdDisplay.innerText = userId;
                         }
                         startDataListener();
+
+                        // Adiciona o listener do formulário AQUI, após o userId estar definido
+                        const paymentForm = document.getElementById('paymentForm');
+                        if (paymentForm) {
+                            paymentForm.addEventListener('submit', async (e) => {
+                                e.preventDefault();
+
+                                const unitNumber = document.getElementById('unitNumber').value;
+                                const unitType = document.getElementById('unitType').value;
+                                const paymentType = document.getElementById('paymentType').value;
+                                const paymentMonth = document.getElementById('paymentMonth').value;
+                                const paymentYear = document.getElementById('paymentYear').value;
+                                const rateioPaid = document.getElementById('rateioPaid').checked;
+
+                                const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
+                                const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+
+                                const newPayment = {
+                                    unidade: unitNumber,
+                                    tipoUnidade: unitType,
+                                    tipoPagamento: paymentType,
+                                    mes: paymentMonth,
+                                    ano: paymentYear,
+                                    valorReceita: valorReceita,
+                                    valorRateio: valorRateio,
+                                    dataRegistro: new Date()
+                                };
+
+                                await addPayment(newPayment);
+
+                                // Limpar formulário
+                                paymentForm.reset();
+                                // Resetar o ano para o ano atual após o registro
+                                document.getElementById('paymentYear').value = new Date().getFullYear();
+                            });
+                        } else {
+                            console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                        }
                     } else {
                         showError("Usuário não autenticado. Não foi possível carregar os dados.");
                     }
                 });
-
-                // Adiciona o listener do formulário
-                const paymentForm = document.getElementById('paymentForm');
-                if (paymentForm) {
-                    paymentForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        const unitNumber = document.getElementById('unitNumber').value;
-                        const unitType = document.getElementById('unitType').value;
-                        const paymentType = document.getElementById('paymentType').value;
-                        const paymentMonth = document.getElementById('paymentMonth').value;
-                        const paymentYear = document.getElementById('paymentYear').value;
-                        const rateioPaid = document.getElementById('rateioPaid').checked;
-
-                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-
-                        const newPayment = {
-                            unidade: unitNumber,
-                            tipoUnidade: unitType,
-                            tipoPagamento: paymentType,
-                            mes: paymentMonth,
-                            ano: paymentYear,
-                            valorReceita: valorReceita,
-                            valorRateio: valorRateio,
-                            dataRegistro: new Date()
-                        };
-
-                        await addPayment(newPayment);
-
-                        // Limpar formulário
-                        paymentForm.reset();
-                        // Resetar o ano para o ano atual após o registro
-                        document.getElementById('paymentYear').value = new Date().getFullYear();
-                    });
-                } else {
-                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
-                }
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
