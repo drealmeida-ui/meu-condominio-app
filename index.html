@@ -71,7 +71,7 @@
         </p>
 
         <!-- Seção de Resumo Total -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
                 <p class="text-gray-500 font-semibold text-lg">Receita Total</p>
                 <p id="totalReceita" class="text-blue-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
@@ -80,8 +80,12 @@
                 <p class="text-gray-500 font-semibold text-lg">Total Rateio</p>
                 <p id="totalRateio" class="text-purple-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
+            <div class="bg-red-50 rounded-xl p-6 text-center border-2 border-red-200">
+                <p class="text-gray-500 font-semibold text-lg">Total Despesas</p>
+                <p id="totalDespesa" class="text-red-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+            </div>
             <div class="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
-                <p class="text-gray-500 font-semibold text-lg">Total Geral</p>
+                <p class="text-gray-500 font-semibold text-lg">Balanço Geral</p>
                 <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
         </div>
@@ -423,7 +427,7 @@
                 // Adiciona o painel de resumo financeiro
                 const totalsDiv = document.createElement('div');
                 totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
-                const monthlyBalance = totalReceitaMensal - totalDespesaMensal;
+                const monthlyBalance = totalReceitaMensal + totalRateioMensal - totalDespesaMensal;
                 const balanceColor = monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600';
 
                 totalsDiv.innerHTML = `
@@ -689,33 +693,40 @@
         }
 
         // Função para atualizar os totais na UI
-        function updateTotals(payments) {
+        function updateTotals(payments, expenses) {
             const totalReceitaElement = document.getElementById('totalReceita');
             const totalRateioElement = document.getElementById('totalRateio');
+            const totalDespesaElement = document.getElementById('totalDespesa');
             const totalGeralElement = document.getElementById('totalGeral');
 
-            if (!totalReceitaElement || !totalRateioElement || !totalGeralElement) {
+            if (!totalReceitaElement || !totalRateioElement || !totalDespesaElement || !totalGeralElement) {
                 console.error("Erro: Elementos da UI de total não encontrados.");
                 return;
             }
 
             let totalReceita = 0;
             let totalRateio = 0;
+            let totalDespesa = 0;
 
             payments.forEach(payment => {
                 totalReceita += payment.valorReceita;
                 totalRateio += payment.valorRateio;
             });
 
+            expenses.forEach(expense => {
+                totalDespesa += expense.valor;
+            });
+
             totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalGeralElement.innerText = (totalReceita + totalRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            totalDespesaElement.innerText = totalDespesa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            totalGeralElement.innerText = (totalReceita + totalRateio - totalDespesa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
         // Função para renderizar todos os dados no UI
         function renderAllData() {
             renderFinancialData(allPayments, allExpenses);
-            updateTotals(allPayments);
+            updateTotals(allPayments, allExpenses);
             hideLoading();
         }
 
