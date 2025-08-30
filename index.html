@@ -268,42 +268,6 @@
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
-        
-        // Plugin para exibir o texto no centro do gráfico de rosca
-        const doughnutTextPlugin = {
-          id: 'doughnutText',
-          beforeDraw: function(chart, args, options) {
-            const { ctx } = chart;
-            const text = options.text;
-            
-            if (!text) return;
-
-            const isPositive = parseFloat(text.replace('R$', '').replace('.', '').replace(',', '.')) >= 0;
-            const textColor = isPositive ? '#16a34a' : '#dc2626';
-
-            ctx.restore();
-            // Ajuste o tamanho da fonte dinamicamente
-            let fontSize = (chart.height / 12).toFixed(2);
-            ctx.font = `bold ${fontSize}em 'Inter'`;
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = textColor;
-            
-            // Loop para ajustar o tamanho da fonte se o texto for muito grande
-            let textWidth = ctx.measureText(text).width;
-            const maxWidth = chart.width * 0.6; // 60% da largura do gráfico
-            while (textWidth > maxWidth && fontSize > 1) {
-                fontSize = (fontSize - 0.1).toFixed(2);
-                ctx.font = `bold ${fontSize}em 'Inter'`;
-                textWidth = ctx.measureText(text).width;
-            }
-
-            const textX = (chart.width - textWidth) / 2;
-            const textY = chart.height / 2;
-            
-            ctx.fillText(text, textX, textY);
-            ctx.save();
-          }
-        };
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -459,6 +423,9 @@
                 // Adiciona o painel de resumo financeiro
                 const totalsDiv = document.createElement('div');
                 totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
+                const monthlyBalance = totalReceitaMensal - totalDespesaMensal;
+                const balanceColor = monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600';
+
                 totalsDiv.innerHTML = `
                     <div>
                         <p class="text-sm font-semibold text-gray-500">Receita do Mês</p>
@@ -474,7 +441,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
-                        <p class="text-xl font-bold text-green-600">${formatCurrency(totalReceitaMensal - totalDespesaMensal)}</p>
+                        <p class="text-xl font-bold ${balanceColor}">${formatCurrency(monthlyBalance)}</p>
                     </div>
                 `;
                 tableContent.appendChild(totalsDiv);
@@ -498,7 +465,7 @@
                 `;
                 tableContent.appendChild(delinquentDiv);
 
-                // NOVO: Adiciona o canvas para o gráfico
+                // Adiciona o canvas para o gráfico de barras
                 const chartContainer = document.createElement('div');
                 chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6 max-w-sm mx-auto";
                 const chartCanvas = document.createElement('canvas');
@@ -642,7 +609,7 @@
             });
         }
         
-        // NOVO: Função para renderizar o gráfico da aba ativa
+        // NOVO: Função para renderizar o gráfico de barras da aba ativa
         function renderChartForTab(tabId) {
             // Destruir o gráfico anterior, se existir
             if (activeChart) {
@@ -666,29 +633,22 @@
 
             const ctx = canvas.getContext('2d');
             activeChart = new Chart(ctx, {
-                type: 'doughnut',
+                type: 'bar',
                 data: {
                     labels: ['Receita', 'Despesa'],
                     datasets: [{
+                        label: 'Valor',
                         data: [totalReceitaMensal, totalDespesaMensal],
-                        backgroundColor: ['#3b82f6', '#ef4444'],
-                        hoverBackgroundColor: ['#2563eb', '#dc2626'],
-                        borderColor: 'white',
-                        borderWidth: 2,
+                        backgroundColor: ['#16a34a', '#dc2626'],
+                        borderColor: ['#15803d', '#b91c1c'],
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     plugins: {
                         legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 10,
-                                font: {
-                                    size: 14,
-                                    family: 'Inter',
-                                }
-                            }
+                            display: false,
                         },
                         title: {
                             display: true,
@@ -703,20 +663,28 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed;
-                                    const formattedValue = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                    return `${label}: ${formattedValue}`;
+                                    const value = context.parsed.y;
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
                                 }
                             }
                         },
-                        doughnutText: {
-                            text: formatCurrency(totalReceitaMensal - totalDespesaMensal)
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
-                    },
-                    cutout: '70%'
-                },
-                plugins: [doughnutTextPlugin]
+                    }
+                }
             });
         }
 
