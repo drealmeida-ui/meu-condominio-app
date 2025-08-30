@@ -454,7 +454,7 @@
 
         let db;
         let isAuthReady = false;
-        let currentActiveTab = '';
+        let currentActiveTab = ''; // Variável para armazenar a aba ativa
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
@@ -519,16 +519,6 @@
                 return;
             }
 
-            tabsContainer.innerHTML = '';
-            tableContainer.innerHTML = '';
-
-            if (payments.length === 0 && expenses.length === 0) {
-                noDataMessage.classList.remove('hidden');
-                return;
-            } else {
-                noDataMessage.classList.add('hidden');
-            }
-
             // Agrupar pagamentos e despesas por mês e ano
             const allData = [...payments, ...expenses];
             const groupedData = allData.reduce((acc, item) => {
@@ -555,6 +545,17 @@
 
                 return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
             });
+
+            // Limpa o conteúdo antes de renderizar
+            tabsContainer.innerHTML = '';
+            tableContainer.innerHTML = '';
+
+            if (payments.length === 0 && expenses.length === 0) {
+                noDataMessage.classList.remove('hidden');
+                return;
+            } else {
+                noDataMessage.classList.add('hidden');
+            }
 
             // Cria as abas e o conteúdo da tabela
             sortedMonths.forEach(monthYear => {
@@ -602,12 +603,26 @@
                 const tabButton = document.createElement('button');
                 tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
                 tabButton.textContent = monthYear;
-                tabButton.setAttribute('data-target', `tab-${monthYear.replace(/\s+/g, '-')}`);
+                const tabId = `tab-${monthYear.replace(/\s+/g, '-')}`;
+                tabButton.setAttribute('data-target', tabId);
                 tabsContainer.appendChild(tabButton);
+
+                // Adiciona listener para a nova aba
+                tabButton.addEventListener('click', (e) => {
+                    const targetId = e.target.getAttribute('data-target');
+                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
+                        document.getElementById(currentActiveTab).classList.add('hidden');
+                    }
+                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById(targetId).classList.remove('hidden');
+                    e.target.classList.add('active');
+                    currentActiveTab = targetId; // Atualiza a aba ativa
+                    renderChartForTab(currentActiveTab);
+                });
 
                 // Cria o contêiner da tabela para esta aba
                 const tableContent = document.createElement('div');
-                tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
+                tableContent.id = tabId;
                 tableContent.className = "tab-content hidden";
 
                 // Adiciona o painel de resumo financeiro
@@ -767,36 +782,20 @@
                 tableContainer.appendChild(tableContent);
             });
 
-            // Ativa a primeira aba (mais recente) por padrão
-            const firstTabButton = tabsContainer.querySelector('.tab-button');
-            if (firstTabButton) {
-                firstTabButton.classList.add('active');
-                const targetId = firstTabButton.getAttribute('data-target');
-                document.getElementById(targetId).classList.remove('hidden');
-                currentActiveTab = targetId;
-                renderChartForTab(currentActiveTab);
-            }
-
-            // Adiciona o listener para a troca de abas
-            tabsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('tab-button')) {
-                    const targetId = e.target.getAttribute('data-target');
-
-                    // Esconde a aba anterior
-                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
-                        document.getElementById(currentActiveTab).classList.add('hidden');
-                    }
-
-                    // Remove a classe 'active' de todos os botões de aba
-                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-                    // Mostra a nova aba e ativa o botão
+            // Ativa a aba salva, ou a primeira se não houver uma salva
+            const tabToActivate = sortedMonths.find(m => `tab-${m.replace(/\s+/g, '-')}` === currentActiveTab) || sortedMonths[0];
+            if (tabToActivate) {
+                const tabButtonToActivate = tabsContainer.querySelector(`[data-target="tab-${tabToActivate.replace(/\s+/g, '-')}"`);
+                if (tabButtonToActivate) {
+                    tabButtonToActivate.classList.add('active');
+                    const targetId = tabButtonToActivate.getAttribute('data-target');
                     document.getElementById(targetId).classList.remove('hidden');
-                    e.target.classList.add('active');
-                    currentActiveTab = targetId;
+                    currentActiveTab = targetId; // Certifica que a variável está atualizada
                     renderChartForTab(currentActiveTab);
                 }
-            });
+            } else {
+                currentActiveTab = ''; // Reseta se não houver dados
+            }
         }
         
         // NOVO: Função para renderizar o gráfico de barras da aba ativa
