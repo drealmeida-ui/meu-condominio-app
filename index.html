@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -266,6 +267,7 @@
         let currentActiveTab = '';
         let allPayments = [];
         let allExpenses = [];
+        let activeChart = null;
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -460,6 +462,14 @@
                 `;
                 tableContent.appendChild(delinquentDiv);
 
+                // NOVO: Adiciona o canvas para o gráfico
+                const chartContainer = document.createElement('div');
+                chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6";
+                const chartCanvas = document.createElement('canvas');
+                chartCanvas.id = `chart-${monthYear.replace(/\s+/g, '-')}`;
+                chartContainer.appendChild(chartCanvas);
+                tableContent.appendChild(chartContainer);
+
                 // --- Tabela de Pagamentos ---
                 const paymentTableTitle = document.createElement('h3');
                 paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
@@ -539,24 +549,7 @@
                 // Adiciona as linhas da tabela de despesas
                 const expenseTableBody = expensesTable.querySelector('tbody');
                 if (monthData.expenses.length > 0) {
-                    monthData.expenses.forEach(expense => {
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition-colors";
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(expense.valor)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
-                        expenseTableBody.appendChild(row);
-                    });
-                } else {
-                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
+                    monthTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
                 }
                 tableContent.appendChild(expensesTable);
                 tableContainer.appendChild(tableContent);
@@ -569,6 +562,7 @@
                 const targetId = firstTabButton.getAttribute('data-target');
                 document.getElementById(targetId).classList.remove('hidden');
                 currentActiveTab = targetId;
+                renderChartForTab(currentActiveTab);
             }
 
             // Adiciona o listener para a troca de abas
@@ -588,10 +582,69 @@
                     document.getElementById(targetId).classList.remove('hidden');
                     e.target.classList.add('active');
                     currentActiveTab = targetId;
+                    renderChartForTab(currentActiveTab);
                 }
             });
         }
         
+        // NOVO: Função para renderizar o gráfico da aba ativa
+        function renderChartForTab(tabId) {
+            // Destruir o gráfico anterior, se existir
+            if (activeChart) {
+                activeChart.destroy();
+            }
+
+            const monthYear = tabId.replace('tab-', '').replace(/-/g, ' ');
+            const monthData = allData.find(data => `${data.mes} de ${data.ano}` === monthYear);
+
+            if (!monthData) {
+                console.error("Dados do mês não encontrados para o gráfico.");
+                return;
+            }
+
+            const totalReceitaMensal = monthData.payments.reduce((acc, p) => acc + p.valorReceita, 0);
+            const totalDespesaMensal = monthData.expenses.reduce((acc, e) => acc + e.valor, 0);
+
+            const canvas = document.getElementById(`chart-${monthYear.replace(/\s+/g, '-')}`);
+            if (!canvas) {
+                console.error("Elemento canvas do gráfico não encontrado.");
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            activeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Receita', 'Despesa'],
+                    datasets: [{
+                        label: 'Valores Mensais',
+                        data: [totalReceitaMensal, totalDespesaMensal],
+                        backgroundColor: ['#4299e1', '#ef4444'],
+                        borderColor: ['#3182ce', '#b91c1c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
         // Função para atualizar os totais na UI
         function updateTotals(payments) {
             const totalReceitaElement = document.getElementById('totalReceita');
