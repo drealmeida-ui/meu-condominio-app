@@ -8,8 +8,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- NOVO: Inclui a biblioteca Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -462,15 +460,6 @@
                 `;
                 tableContent.appendChild(delinquentDiv);
 
-                <!-- NOVO: Adiciona um contêiner para o gráfico -->
-                const chartContainer = document.createElement('div');
-                chartContainer.className = "bg-white p-4 rounded-xl shadow-md mb-8";
-                chartContainer.innerHTML = `
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Balanço Gráfico</h3>
-                    <canvas id="chart-${monthYear.replace(/\s+/g, '-')}" class="w-full h-64"></canvas>
-                `;
-                tableContent.appendChild(chartContainer);
-
                 // --- Tabela de Pagamentos ---
                 const paymentTableTitle = document.createElement('h3');
                 paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
@@ -582,77 +571,6 @@
                 currentActiveTab = targetId;
             }
 
-            // NOVO: Função para renderizar o gráfico
-            function renderChart(monthYearId, totalReceita, totalDespesa) {
-                const ctx = document.getElementById(`chart-${monthYearId}`).getContext('2d');
-
-                // Destrói qualquer instância de gráfico existente para evitar duplicatas
-                if (window.myCharts && window.myCharts[monthYearId]) {
-                    window.myCharts[monthYearId].destroy();
-                }
-
-                const data = {
-                    labels: ['Receita', 'Despesa'],
-                    datasets: [{
-                        label: 'Valor',
-                        data: [totalReceita, totalDespesa],
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.6)', // Tailwind blue-500
-                            'rgba(239, 68, 68, 0.6)'   // Tailwind red-500
-                        ],
-                        borderColor: [
-                            'rgba(59, 130, 246, 1)',
-                            'rgba(239, 68, 68, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                };
-
-                const options = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += formatCurrency(context.parsed.y);
-                                    }
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value, index, values) {
-                                    return formatCurrency(value);
-                                }
-                            }
-                        }
-                    }
-                };
-
-                // Armazena a instância do gráfico para poder destruí-la depois
-                if (!window.myCharts) {
-                    window.myCharts = {};
-                }
-                window.myCharts[monthYearId] = new Chart(ctx, {
-                    type: 'bar', // Ou 'pie', 'doughnut' para outros tipos de gráfico
-                    data: data,
-                    options: options,
-                });
-            }
-
             // Adiciona o listener para a troca de abas
             tabsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('tab-button')) {
@@ -670,33 +588,8 @@
                     document.getElementById(targetId).classList.remove('hidden');
                     e.target.classList.add('active');
                     currentActiveTab = targetId;
-
-                    // NOVO: Renderiza o gráfico para a aba ativa
-                    const monthYearId = targetId.replace('tab-', '');
-                    const monthData = groupedData[monthYearId.replace(/-/g, ' de ')]; // Reverte o ID para a chave do groupedData
-                    if (monthData) {
-                        let totalReceitaMensal = 0;
-                        monthData.payments.forEach(p => totalReceitaMensal += p.valorReceita);
-                        let totalDespesaMensal = 0;
-                        monthData.expenses.forEach(e => totalDespesaMensal += e.valor);
-                        renderChart(monthYearId, totalReceitaMensal, totalDespesaMensal);
-                    }
                 }
             });
-
-            // NOVO: Renderiza o gráfico para a primeira aba ativa ao carregar
-            if (firstTabButton) {
-                const targetId = firstTabButton.getAttribute('data-target');
-                const monthYearId = targetId.replace('tab-', '');
-                const monthData = groupedData[monthYearId.replace(/-/g, ' de ')];
-                if (monthData) {
-                    let totalReceitaMensal = 0;
-                    monthData.payments.forEach(p => totalReceitaMensal += p.valorReceita);
-                    let totalDespesaMensal = 0;
-                    monthData.expenses.forEach(e => totalDespesaMensal += e.valor);
-                    renderChart(monthYearId, totalReceitaMensal, totalDespesaMensal);
-                }
-            }
         }
         
         // Função para atualizar os totais na UI
