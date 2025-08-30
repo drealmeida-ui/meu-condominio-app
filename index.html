@@ -110,7 +110,7 @@
                     <label for="paymentType" class="block text-gray-700 font-semibold mb-1">Pagamento</label>
                     <select id="paymentType" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
                         <option value="Normal">Normal</option>
-                        <option value="A_Vista">À Vista (com desconto)</option>
+                        <option value="A_Vista">Com desconto</option>
                     </select>
                 </div>
 
@@ -415,7 +415,7 @@
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoUnidade}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'À Vista' : 'Normal'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
