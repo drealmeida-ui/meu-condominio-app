@@ -208,19 +208,19 @@
                 <h2 class="text-2xl font-bold text-gray-800">Balanço Mensal</h2>
             </div>
 
-            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum pagamento ou despesa registrado ainda. Adicione um acima para começar.</p>
-            
-            <!-- Contêiner para as Abas -->
-            <div id="tabsContainer" class="flex flex-wrap gap-2 p-4 border-b border-gray-200 justify-center">
+            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum dado registrado ainda.</p>
+
+            <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
+                <!-- Abas dos meses serão inseridas aqui pelo JS -->
             </div>
 
-            <!-- Contêiner para o Conteúdo das Tabelas -->
-            <div id="financialTableContainer" class="p-4">
+            <div id="financialTableContainer" class="p-4 overflow-x-auto">
+                <!-- Conteúdo financeiro será inserido aqui pelo JS -->
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs e Script -->
+    <!-- Firebase SDKs -->
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -280,37 +280,55 @@
 
             if (isError) {
                 content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-red-50 border border-red-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" class="text-red-500"/>';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.add('text-red-500');
+                text.classList.add('text-red-700');
                 button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600';
             } else {
                 content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-green-50 border border-green-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" class="text-green-500"/>';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.add('text-green-500');
+                text.classList.add('text-green-700');
                 button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-green-500 hover:bg-green-600';
             }
             modal.classList.remove('hidden');
         }
 
-        // Funções para mostrar/esconder o loading
+        // Função para mostrar a mensagem de carregamento
         function showLoading() {
-            document.getElementById('loadingMessage').classList.remove('hidden');
-        }
-        function hideLoading() {
-            document.getElementById('loadingMessage').classList.add('hidden');
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.classList.remove('hidden');
+            }
         }
 
-        // Formata um valor numérico para o padrão de moeda R$
+        // Função para esconder a mensagem de carregamento
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.classList.add('hidden');
+            }
+        }
+
+        // Função para formatar um número para moeda BRL
         function formatCurrency(value) {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Renderiza as abas e as tabelas financeiras com base nos dados
+        // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
-            const tableContainer = document.getElementById('financialTableContainer');
-            const tabsContainer = document.getElementById('tabsContainer');
             const noDataMessage = document.getElementById('noDataMessage');
+            const tabsContainer = document.getElementById('tabsContainer');
+            const tableContainer = document.getElementById('financialTableContainer');
 
-            tableContainer.innerHTML = '';
+            if (!noDataMessage || !tabsContainer || !tableContainer) {
+                console.error("Erro fatal: Elementos da UI não encontrados.");
+                showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
+                return;
+            }
+
             tabsContainer.innerHTML = '';
+            tableContainer.innerHTML = '';
 
             if (payments.length === 0 && expenses.length === 0) {
                 noDataMessage.classList.remove('hidden');
@@ -319,78 +337,129 @@
                 noDataMessage.classList.add('hidden');
             }
 
-            const groupedData = {};
-
-            // Agrupa pagamentos por mês e ano
-            payments.forEach(p => {
-                const key = `${p.mes}-${p.ano}`;
-                if (!groupedData[key]) {
-                    groupedData[key] = {
-                        payments: [],
-                        expenses: [],
-                        totalPayments: 0,
-                        totalExpenses: 0
-                    };
+            // Agrupar pagamentos e despesas por mês e ano
+            const allData = [...payments, ...expenses];
+            const groupedData = allData.reduce((acc, item) => {
+                const monthYear = `${item.mes} de ${item.ano}`;
+                if (!acc[monthYear]) {
+                    acc[monthYear] = { payments: [], expenses: [] };
                 }
-                groupedData[key].payments.push(p);
-                groupedData[key].totalPayments += (p.valorReceita + p.valorRateio);
-            });
-
-            // Agrupa despesas por mês e ano
-            expenses.forEach(e => {
-                const key = `${e.mes}-${e.ano}`;
-                if (!groupedData[key]) {
-                    groupedData[key] = {
-                        payments: [],
-                        expenses: [],
-                        totalPayments: 0,
-                        totalExpenses: 0
-                    };
+                if (item.valorReceita !== undefined) {
+                    acc[monthYear].payments.push(item);
+                } else {
+                    acc[monthYear].expenses.push(item);
                 }
-                groupedData[key].expenses.push(e);
-                groupedData[key].totalExpenses += e.valor;
-            });
+                return acc;
+            }, {});
 
-            // Ordena os meses do mais recente para o mais antigo
+            // Ordenar os meses do mais recente para o mais antigo
             const sortedMonths = Object.keys(groupedData).sort((a, b) => {
-                const [monthA, yearA] = a.split('-');
-                const [monthB, yearB] = b.split('-');
-                const indexA = MESES.indexOf(monthA);
-                const indexB = MESES.indexOf(monthB);
+                const [monthA, yearA] = a.split(' de ');
+                const [monthB, yearB] = b.split(' de ');
 
-                if (parseInt(yearB) !== parseInt(yearA)) {
+                if (parseInt(yearA) !== parseInt(yearB)) {
                     return parseInt(yearB) - parseInt(yearA);
                 }
-                return indexB - indexA;
+
+                return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
             });
 
-            // Cria as abas e os conteúdos das tabelas
-            sortedMonths.forEach(monthKey => {
-                const monthData = groupedData[monthKey];
-                const [month, year] = monthKey.split('-');
-                const tabButtonId = `tab-${month}-${year}`;
-                const tableContentId = `content-${month}-${year}`;
-                const saldo = monthData.totalPayments - monthData.totalExpenses;
-                const saldoClass = saldo >= 0 ? 'text-green-600' : 'text-red-600';
+            // Cria as abas e o conteúdo da tabela
+            sortedMonths.forEach(monthYear => {
+                const monthData = groupedData[monthYear];
+                let totalReceitaMensal = 0;
+                let totalRateioMensal = 0;
+                let totalDespesaMensal = 0;
                 
+                // Calcular inadimplentes e totais de receita
+                const delinquentCounts = {
+                    "Apartamento": TOTAL_UNITS["Apartamento"],
+                    "Kitnet": TOTAL_UNITS["Kitnet"],
+                    "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
+                };
+                
+                // Decrementa o contador para cada pagamento encontrado
+                monthData.payments.forEach(p => {
+                    delinquentCounts[p.tipoUnidade]--;
+                    totalReceitaMensal += p.valorReceita;
+                    totalRateioMensal += p.valorRateio;
+                });
+
+                // Calcula o total de despesas
+                monthData.expenses.forEach(e => {
+                    totalDespesaMensal += e.valor;
+                });
+                
+                // Ordenar os pagamentos de forma crescente por tipo e número da unidade
+                const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
+                monthData.payments.sort((a, b) => {
+                    const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
+                    const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
+                    
+                    if (typeIndexA !== typeIndexB) {
+                        return typeIndexA - typeIndexB;
+                    }
+
+                    // Extrai apenas os números para a ordenação
+                    const numA = parseInt(a.unidade.replace(/\D/g, ''));
+                    const numB = parseInt(b.unidade.replace(/\D/g, ''));
+                    return numA - numB;
+                });
+
                 // Cria o botão da aba
                 const tabButton = document.createElement('button');
-                tabButton.className = "tab-button px-4 py-2 text-sm font-semibold rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500";
-                tabButton.setAttribute('data-target', tableContentId);
-                tabButton.textContent = `${month} de ${year}`;
+                tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
+                tabButton.textContent = monthYear;
+                tabButton.setAttribute('data-target', `tab-${monthYear.replace(/\s+/g, '-')}`);
                 tabsContainer.appendChild(tabButton);
 
-                // Cria o contêiner do conteúdo da tabela
+                // Cria o contêiner da tabela para esta aba
                 const tableContent = document.createElement('div');
-                tableContent.id = tableContentId;
-                tableContent.className = 'hidden';
+                tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
+                tableContent.className = "tab-content hidden";
 
-                // Título de saldo
-                const saldoTitle = document.createElement('h3');
-                saldoTitle.className = "text-xl font-bold text-gray-800 my-4 text-center";
-                saldoTitle.innerHTML = `Saldo do Mês: <span class="${saldoClass}">${formatCurrency(saldo)}</span>`;
-                tableContent.appendChild(saldoTitle);
+                // Adiciona o painel de resumo financeiro
+                const totalsDiv = document.createElement('div');
+                totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
+                totalsDiv.innerHTML = `
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500">Receita do Mês</p>
+                        <p class="text-xl font-bold text-blue-600">${formatCurrency(totalReceitaMensal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p>
+                        <p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p>
+                        <p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
+                        <p class="text-xl font-bold text-green-600">${formatCurrency(totalReceitaMensal - totalDespesaMensal)}</p>
+                    </div>
+                `;
+                tableContent.appendChild(totalsDiv);
                 
+                // Adiciona o painel de inadimplentes dentro do painel do mês
+                const delinquentDiv = document.createElement('div');
+                delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
+                delinquentDiv.innerHTML = `
+                    <div class="mb-2 sm:mb-0">
+                        <p class="text-sm font-semibold text-gray-600">Inadimplentes</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p>
+                    </div>
+                `;
+                tableContent.appendChild(delinquentDiv);
+
                 // --- Tabela de Pagamentos ---
                 const paymentTableTitle = document.createElement('h3');
                 paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
