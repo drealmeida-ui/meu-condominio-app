@@ -41,6 +41,60 @@
         .tab-button.active:hover {
             background-color: #3182ce; /* a slightly darker blue */
         }
+
+        .modal {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 95%;
+            width: 700px;
+            max-height: 95vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Estilos de impressão */
+        @media print {
+            body {
+                background-color: white;
+            }
+            .no-print, .modal {
+                display: none !important;
+            }
+            .container-card {
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .report-container {
+                display: block !important;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background-color: white;
+                box-shadow: none;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 sm:p-8">
@@ -71,7 +125,7 @@
         </p>
 
         <!-- Seção de Resumo Total -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="no-print grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
                 <p class="text-gray-500 font-semibold text-base">Receita Total</p>
                 <p id="totalReceita" class="text-blue-600 font-extrabold text-xl mt-1">R$ 0,00</p>
@@ -90,8 +144,15 @@
             </div>
         </div>
 
+        <!-- Botão para abrir o modal de relatório (NOVO) -->
+        <div class="no-print mb-8">
+            <button id="openReportModalBtn" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105">
+                Gerar Relatório por Período
+            </button>
+        </div>
+
         <!-- Formulário para Registrar Pagamentos -->
-        <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
+        <div class="no-print bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Pagamento</h2>
             <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                 <!-- Campo de Número da Unidade -->
@@ -159,7 +220,7 @@
         </div>
 
         <!-- Formulário para Registrar Despesas -->
-        <div class="bg-red-50 p-6 rounded-xl border-2 border-red-200 mb-8">
+        <div class="no-print bg-red-50 p-6 rounded-xl border-2 border-red-200 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Despesa</h2>
             <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <!-- Campo de Descrição da Despesa -->
@@ -173,7 +234,7 @@
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
                     <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
-                
+
                 <!-- Campo de Mês da Despesa -->
                 <div>
                     <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
@@ -207,8 +268,9 @@
             </form>
         </div>
 
+
         <!-- Seção de Pagamentos Registrados com Abas e Tabela -->
-        <div class="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="no-print mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="p-6 bg-gray-50 border-b-2 border-gray-200">
                 <h2 class="text-2xl font-bold text-gray-800">Balanço Mensal</h2>
             </div>
@@ -224,6 +286,75 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal do Relatório por Período (NOVO) -->
+    <div id="reportModal" class="modal hidden">
+        <div class="modal-content">
+            <button id="closeReportModalBtn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <div class="no-print bg-green-50 p-6 rounded-xl border-2 border-green-200 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Gerar Relatório por Período</h2>
+                <form id="reportForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    <!-- Data de Início -->
+                    <div>
+                        <label for="startMonth" class="block text-gray-700 font-semibold mb-1">Mês Início</label>
+                        <select id="startMonth" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                            <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option><option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option><option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option><option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option><option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option><option value="Dezembro">Dezembro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="startYear" class="block text-gray-700 font-semibold mb-1">Ano Início</label>
+                        <input type="number" id="startYear" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                    </div>
+                    <!-- Data de Fim -->
+                    <div>
+                        <label for="endMonth" class="block text-gray-700 font-semibold mb-1">Mês Fim</label>
+                        <select id="endMonth" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                            <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option><option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option><option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option><option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option><option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option><option value="Dezembro">Dezembro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="endYear" class="block text-gray-700 font-semibold mb-1">Ano Fim</label>
+                        <input type="number" id="endYear" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                    </div>
+
+                    <div class="lg:col-span-4">
+                        <button type="submit" class="w-full px-6 py-3 mt-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105">
+                            Gerar Relatório
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Container do Relatório Gerado (dentro do modal) -->
+            <div id="reportContainer" class="report-container mt-8 bg-white rounded-xl shadow-lg overflow-hidden hidden">
+                <div class="p-6 bg-gray-50 border-b-2 border-gray-200 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">Relatório de Período</h2>
+                    <button onclick="window.print()" class="no-print px-4 py-2 bg-gray-200 rounded-lg font-semibold text-gray-700 hover:bg-gray-300 transition-colors">
+                        Imprimir
+                    </button>
+                </div>
+                
+                <div id="reportContent" class="p-6">
+                    <!-- Resumo e gráfico serão injetados aqui via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Firebase SDKs -->
     <script type="module">
@@ -667,8 +798,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    const value = context.parsed.y;
-                                    return formatCurrency(value);
+                                    return formatCurrency(context.parsed.y);
                                 }
                             }
                         }
@@ -691,7 +821,109 @@
                 }
             });
         }
+        
+        // NOVO: Função para gerar o relatório do período
+        function generateReport() {
+            const startMonth = document.getElementById('startMonth').value;
+            const startYear = parseInt(document.getElementById('startYear').value);
+            const endMonth = document.getElementById('endMonth').value;
+            const endYear = parseInt(document.getElementById('endYear').value);
 
+            // Validação simples
+            if (endYear < startYear || (endYear === startYear && MESES.indexOf(endMonth) < MESES.indexOf(startMonth))) {
+                showMessage("O mês/ano de fim deve ser posterior ou igual ao de início.", true);
+                return;
+            }
+
+            // Filtra os dados com base no período selecionado
+            const filteredPayments = allPayments.filter(p => {
+                const pMonthIndex = MESES.indexOf(p.mes);
+                const pYear = p.ano;
+                const startDateValid = (pYear > startYear) || (pYear === startYear && pMonthIndex >= MESES.indexOf(startMonth));
+                const endDateValid = (pYear < endYear) || (pYear === endYear && pMonthIndex <= MESES.indexOf(endMonth));
+                return startDateValid && endDateValid;
+            });
+            
+            const filteredExpenses = allExpenses.filter(e => {
+                const eMonthIndex = MESES.indexOf(e.mes);
+                const eYear = e.ano;
+                const startDateValid = (eYear > startYear) || (eYear === startYear && eMonthIndex >= MESES.indexOf(startMonth));
+                const endDateValid = (eYear < endYear) || (eYear === endYear && eMonthIndex <= MESES.indexOf(endMonth));
+                return startDateValid && endDateValid;
+            });
+
+            // Calcula os totais do período
+            const totalReceita = filteredPayments.reduce((sum, p) => sum + p.valorReceita, 0);
+            const totalRateio = filteredPayments.reduce((sum, p) => sum + p.valorRateio, 0);
+            const totalDespesa = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
+            const totalGeral = totalReceita + totalRateio - totalDespesa;
+
+            const balanceColor = totalGeral >= 0 ? 'text-green-600' : 'text-red-600';
+            const reportContent = document.getElementById('reportContent');
+            
+            // Renderiza o conteúdo do relatório
+            reportContent.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 text-center">
+                    <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                        <p class="text-gray-500 font-semibold text-sm">Receita Total</p>
+                        <p class="text-blue-600 font-extrabold text-lg">${formatCurrency(totalReceita)}</p>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                        <p class="text-gray-500 font-semibold text-sm">Total Rateio</p>
+                        <p class="text-purple-600 font-extrabold text-lg">${formatCurrency(totalRateio)}</p>
+                    </div>
+                    <div class="bg-red-50 rounded-xl p-4 border border-red-200">
+                        <p class="text-gray-500 font-semibold text-sm">Total Despesas</p>
+                        <p class="text-red-600 font-extrabold text-lg">${formatCurrency(totalDespesa)}</p>
+                    </div>
+                    <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+                        <p class="text-gray-500 font-semibold text-sm">Balanço Geral</p>
+                        <p class="font-extrabold text-lg ${balanceColor}">${formatCurrency(totalGeral)}</p>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white rounded-lg shadow-inner mb-6 max-w-lg mx-auto">
+                    <canvas id="reportChart"></canvas>
+                </div>
+            `;
+            
+            document.getElementById('reportContainer').classList.remove('hidden');
+
+            // Renderiza o gráfico do relatório
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            if(activeChart) activeChart.destroy();
+            activeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Receita', 'Despesa'],
+                    datasets: [{
+                        label: 'Valor',
+                        data: [totalReceita, totalDespesa],
+                        backgroundColor: ['#16a34a', '#dc2626'],
+                        borderColor: ['#15803d', '#b91c1c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Balanço do Período',
+                            font: { size: 18, weight: 'bold', family: 'Inter' },
+                            color: '#1f2937'
+                        },
+                        tooltip: { callbacks: { label: (context) => formatCurrency(context.parsed.y) } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+        
         // Função para atualizar os totais na UI
         function updateTotals(payments, expenses) {
             const totalReceitaElement = document.getElementById('totalReceita');
@@ -819,6 +1051,40 @@
             }
         };
         
+        // NOVO: Adiciona o listener para o formulário de relatório
+        function setupReportModal() {
+            const openBtn = document.getElementById('openReportModalBtn');
+            const closeBtn = document.getElementById('closeReportModalBtn');
+            const modal = document.getElementById('reportModal');
+            const reportForm = document.getElementById('reportForm');
+            const reportContainer = document.getElementById('reportContainer');
+
+            if (!openBtn || !closeBtn || !modal || !reportForm || !reportContainer) {
+                console.error("Elementos do modal de relatório não encontrados.");
+                return;
+            }
+            
+            openBtn.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                // Limpa o conteúdo e esconde o relatório anterior
+                reportContainer.classList.add('hidden');
+            });
+            
+            closeBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                // Destrói o gráfico ao fechar o modal para evitar memory leaks
+                if (activeChart) {
+                    activeChart.destroy();
+                    activeChart = null;
+                }
+            });
+
+            reportForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                generateReport();
+            });
+        }
+        
         // Função principal que inicializa o aplicativo
         async function main() {
             try {
@@ -831,6 +1097,9 @@
                 const currentYear = new Date().getFullYear();
                 document.getElementById('paymentYear').value = currentYear;
                 document.getElementById('expenseYear').value = currentYear;
+                document.getElementById('startYear').value = currentYear;
+                document.getElementById('endYear').value = currentYear;
+
 
                 // Autentica o usuário e, após o login, inicia a escuta em tempo real
                 onAuthStateChanged(auth, async (user) => {
@@ -939,6 +1208,8 @@
                 } else {
                     console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
                 }
+                
+                setupReportModal();
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
