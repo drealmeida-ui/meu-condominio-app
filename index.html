@@ -309,33 +309,16 @@
                 let totalReceitaMensal = 0;
                 let totalRateioMensal = 0;
                 
-                // Conjunto de unidades que já pagaram neste mês
-                const paidUnits = new Set(monthPayments.map(p => `${p.tipoUnidade} ${p.unidade}`));
-                
                 // Calcular inadimplentes para este mês
                 const delinquentCounts = {
-                    "Apartamento": 0,
-                    "Kitnet": 0,
-                    "Sala Comercial": 0
+                    "Apartamento": TOTAL_UNITS["Apartamento"],
+                    "Kitnet": TOTAL_UNITS["Kitnet"],
+                    "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
                 };
                 
-                for (let i = 1; i <= TOTAL_UNITS["Apartamento"]; i++) {
-                    if (!paidUnits.has(`Apartamento Apto ${i}`)) {
-                        delinquentCounts["Apartamento"]++;
-                    }
-                }
-                for (let i = 1; i <= TOTAL_UNITS["Kitnet"]; i++) {
-                    if (!paidUnits.has(`Kitnet Kitnet ${i}`)) {
-                        delinquentCounts["Kitnet"]++;
-                    }
-                }
-                for (let i = 1; i <= TOTAL_UNITS["Sala Comercial"]; i++) {
-                    if (!paidUnits.has(`Sala Comercial Sala ${i}`)) {
-                        delinquentCounts["Sala Comercial"]++;
-                    }
-                }
-
+                // Decrementa o contador para cada pagamento encontrado
                 monthPayments.forEach(p => {
+                    delinquentCounts[p.tipoUnidade]--;
                     totalReceitaMensal += p.valorReceita;
                     totalRateioMensal += p.valorRateio;
                 });
@@ -350,6 +333,7 @@
                         return typeIndexA - typeIndexB;
                     }
 
+                    // Extrai apenas os números para a ordenação
                     const numA = parseInt(a.unidade.replace(/\D/g, ''));
                     const numB = parseInt(b.unidade.replace(/\D/g, ''));
                     return numA - numB;
