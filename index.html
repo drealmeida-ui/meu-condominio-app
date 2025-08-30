@@ -99,9 +99,9 @@
                 <div>
                     <label for="unitType" class="block text-gray-700 font-semibold mb-1">Tipo</label>
                     <select id="unitType" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                        <option value="Apartamento">Apartamento</option>
+                        <option value="Apartamento">Apto.</option>
                         <option value="Kitnet">Kitnet</option>
-                        <option value="Sala Comercial">Sala Comercial</option>
+                        <option value="Sala Comercial">Sala</option>
                     </select>
                 </div>
 
@@ -205,6 +205,12 @@
             "Apartamento": 38,
             "Kitnet": 10,
             "Sala Comercial": 16
+        };
+        
+        const unitTypeDisplay = {
+          "Apartamento": "Apto.",
+          "Kitnet": "Kitnet",
+          "Sala Comercial": "Sala"
         };
 
         let db;
@@ -411,10 +417,11 @@
 
                     const receita = formatCurrency(payment.valorReceita);
                     const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+                    const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
 
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoUnidade}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
@@ -504,7 +511,7 @@
                 const querySnapshot = await getDocs(q);
 
                 if (!querySnapshot.empty) {
-                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${paymentData.tipoUnidade} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
+                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${unitTypeDisplay[paymentData.tipoUnidade]} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
                     return;
                 }
 
