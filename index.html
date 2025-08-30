@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- NOVO: Inclui a biblioteca Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -166,8 +168,7 @@
                 <!-- Campo de Valor da Despesa -->
                 <div>
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
-                    <!-- ALTERADO: type="text" e adicionado oninput para formatação em tempo real -->
-                    <input type="text" id="expenseValue" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors" oninput="formatExpenseValue(this)">
+                    <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
                 
                 <!-- Campo de Mês da Despesa -->
@@ -316,51 +317,6 @@
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // NOVO: Função para formatar o valor da despesa enquanto digita
-        function formatExpenseValue(input) {
-            let value = input.value;
-
-            // Remove tudo que não for número (exceto a vírgula/ponto decimal)
-            // Permite apenas dígitos e uma vírgula para o separador decimal
-            value = value.replace(/[^0-9,]/g, '');
-
-            // Garante que haja apenas uma vírgula
-            const parts = value.split(',');
-            if (parts.length > 2) {
-                value = parts[0] + ',' + parts.slice(1).join('');
-            }
-
-            // Converte para número para garantir que é um valor válido
-            // Substitui a vírgula por ponto para que parseFloat funcione corretamente
-            let numericValue = parseFloat(value.replace(',', '.'));
-
-            if (isNaN(numericValue)) {
-                input.value = ''; // Limpa se não for um número válido
-                return;
-            }
-
-            // Formata como moeda BRL
-            // Usa um NumberFormat para controlar o número de casas decimais
-            const formatter = new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-
-            // Para evitar que o R$ apareça enquanto o usuário digita,
-            // formatamos apenas o número e adicionamos o R$ no final,
-            // ou deixamos o R$ se o campo estiver vazio ou for 0
-            if (value === '' || numericValue === 0) {
-                input.value = ''; // Ou 'R$ 0,00' se preferir
-            } else {
-                // Remove o R$ e os espaços para que o usuário possa continuar digitando
-                let formatted = formatter.format(numericValue);
-                input.value = formatted;
-            }
-        }
-
-
         // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
             const noDataMessage = document.getElementById('noDataMessage');
@@ -506,6 +462,15 @@
                 `;
                 tableContent.appendChild(delinquentDiv);
 
+                <!-- NOVO: Adiciona um contêiner para o gráfico -->
+                const chartContainer = document.createElement('div');
+                chartContainer.className = "bg-white p-4 rounded-xl shadow-md mb-8";
+                chartContainer.innerHTML = `
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Balanço Gráfico</h3>
+                    <canvas id="chart-${monthYear.replace(/\s+/g, '-')}" class="w-full h-64"></canvas>
+                `;
+                tableContent.appendChild(chartContainer);
+
                 // --- Tabela de Pagamentos ---
                 const paymentTableTitle = document.createElement('h3');
                 paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
@@ -617,6 +582,77 @@
                 currentActiveTab = targetId;
             }
 
+            // NOVO: Função para renderizar o gráfico
+            function renderChart(monthYearId, totalReceita, totalDespesa) {
+                const ctx = document.getElementById(`chart-${monthYearId}`).getContext('2d');
+
+                // Destrói qualquer instância de gráfico existente para evitar duplicatas
+                if (window.myCharts && window.myCharts[monthYearId]) {
+                    window.myCharts[monthYearId].destroy();
+                }
+
+                const data = {
+                    labels: ['Receita', 'Despesa'],
+                    datasets: [{
+                        label: 'Valor',
+                        data: [totalReceita, totalDespesa],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.6)', // Tailwind blue-500
+                            'rgba(239, 68, 68, 0.6)'   // Tailwind red-500
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+
+                const options = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatCurrency(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Armazena a instância do gráfico para poder destruí-la depois
+                if (!window.myCharts) {
+                    window.myCharts = {};
+                }
+                window.myCharts[monthYearId] = new Chart(ctx, {
+                    type: 'bar', // Ou 'pie', 'doughnut' para outros tipos de gráfico
+                    data: data,
+                    options: options,
+                });
+            }
+
             // Adiciona o listener para a troca de abas
             tabsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('tab-button')) {
@@ -634,8 +670,33 @@
                     document.getElementById(targetId).classList.remove('hidden');
                     e.target.classList.add('active');
                     currentActiveTab = targetId;
+
+                    // NOVO: Renderiza o gráfico para a aba ativa
+                    const monthYearId = targetId.replace('tab-', '');
+                    const monthData = groupedData[monthYearId.replace(/-/g, ' de ')]; // Reverte o ID para a chave do groupedData
+                    if (monthData) {
+                        let totalReceitaMensal = 0;
+                        monthData.payments.forEach(p => totalReceitaMensal += p.valorReceita);
+                        let totalDespesaMensal = 0;
+                        monthData.expenses.forEach(e => totalDespesaMensal += e.valor);
+                        renderChart(monthYearId, totalReceitaMensal, totalDespesaMensal);
+                    }
                 }
             });
+
+            // NOVO: Renderiza o gráfico para a primeira aba ativa ao carregar
+            if (firstTabButton) {
+                const targetId = firstTabButton.getAttribute('data-target');
+                const monthYearId = targetId.replace('tab-', '');
+                const monthData = groupedData[monthYearId.replace(/-/g, ' de ')];
+                if (monthData) {
+                    let totalReceitaMensal = 0;
+                    monthData.payments.forEach(p => totalReceitaMensal += p.valorReceita);
+                    let totalDespesaMensal = 0;
+                    monthData.expenses.forEach(e => totalDespesaMensal += e.valor);
+                    renderChart(monthYearId, totalReceitaMensal, totalDespesaMensal);
+                }
+            }
         }
         
         // Função para atualizar os totais na UI
@@ -847,19 +908,13 @@
                         e.preventDefault();
 
                         const description = document.getElementById('expenseDescription').value;
-                        let valueInput = document.getElementById('expenseValue').value; // Pega o valor formatado
-
-                        // NOVO: Desformata o valor antes de converter para float
-                        // Remove R$, espaços, pontos de milhar e troca vírgula por ponto decimal
-                        valueInput = valueInput.replace(/[R$\s.]/g, '').replace(',', '.');
-                        const value = parseFloat(valueInput); // Converte para float
-
+                        const value = parseFloat(document.getElementById('expenseValue').value);
                         const month = document.getElementById('expenseMonth').value;
                         const year = parseInt(document.getElementById('expenseYear').value);
 
                         const newExpense = {
                             descricao: description,
-                            valor: value, // Agora 'value' é o número puro
+                            valor: value,
                             mes: month,
                             ano: year,
                             dataRegistro: new Date()
