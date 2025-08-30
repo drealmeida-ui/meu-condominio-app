@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Receita do Condomínio</title>
+    <title>Controle de Receita e Despesa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +63,7 @@
     <!-- Container Principal -->
     <div class="container-card">
         <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
-            Controle de Receita
+            Controle de Receita e Despesa
         </h1>
         <p class="text-lg text-gray-600 text-center mb-8">
             Condomínio Pirâmide
@@ -80,13 +80,13 @@
                 <p id="totalRateio" class="text-purple-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
             <div class="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
-                <p class="text-gray-500 font-semibold text-lg">Total (Taxa+Rateio)</p>
+                <p class="text-gray-500 font-semibold text-lg">Total Geral</p>
                 <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
         </div>
 
         <!-- Formulário para Registrar Pagamentos -->
-        <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200">
+        <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Pagamento</h2>
             <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                 <!-- Campo de Número da Unidade -->
@@ -153,22 +153,70 @@
             </form>
         </div>
 
+        <!-- Formulário para Registrar Despesas -->
+        <div class="bg-red-50 p-6 rounded-xl border-2 border-red-200 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Despesa</h2>
+            <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <!-- Campo de Descrição da Despesa -->
+                <div>
+                    <label for="expenseDescription" class="block text-gray-700 font-semibold mb-1">Descrição</label>
+                    <input type="text" id="expenseDescription" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                </div>
+
+                <!-- Campo de Valor da Despesa -->
+                <div>
+                    <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
+                    <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                </div>
+                
+                <!-- Campo de Mês da Despesa -->
+                <div>
+                    <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
+                    <select id="expenseMonth" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                        <option value="Janeiro">Janeiro</option>
+                        <option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option>
+                        <option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option>
+                        <option value="Agosto">Agosto</option>
+                        <option value="Setembro">Setembro</option>
+                        <option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option>
+                        <option value="Dezembro">Dezembro</option>
+                    </select>
+                </div>
+
+                <!-- Campo de Ano da Despesa -->
+                <div>
+                    <label for="expenseYear" class="block text-gray-700 font-semibold mb-1">Ano</label>
+                    <input type="number" id="expenseYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                </div>
+
+                <div class="lg:col-span-4">
+                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors shadow-lg transform hover:scale-105">
+                        Registrar Despesa
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Seção de Pagamentos Registrados com Abas e Tabela -->
         <div class="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
             <div class="p-6 bg-gray-50 border-b-2 border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Pagamentos Registrados</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Balanço Mensal</h2>
             </div>
 
-            <p id="noPaymentsMessage" class="text-center text-gray-500 p-6 hidden">Nenhum pagamento registrado ainda.</p>
+            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum dado registrado ainda.</p>
 
             <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
                 <!-- Abas dos meses serão inseridas aqui pelo JS -->
             </div>
 
-            <div id="paymentsTableContainer" class="p-4 overflow-x-auto">
-                <!-- Tabelas de pagamentos serão inseridas aqui pelo JS -->
+            <div id="financialTableContainer" class="p-4 overflow-x-auto">
+                <!-- Conteúdo financeiro será inserido aqui pelo JS -->
             </div>
-
         </div>
     </div>
 
@@ -265,13 +313,13 @@
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Função que renderiza os pagamentos na UI
-        function renderPayments(payments) {
-            const noPaymentsMessage = document.getElementById('noPaymentsMessage');
+        // Função para renderizar os dados financeiros (pagamentos e despesas)
+        function renderFinancialData(payments, expenses) {
+            const noDataMessage = document.getElementById('noDataMessage');
             const tabsContainer = document.getElementById('tabsContainer');
-            const tableContainer = document.getElementById('paymentsTableContainer');
+            const tableContainer = document.getElementById('financialTableContainer');
 
-            if (!noPaymentsMessage || !tabsContainer || !tableContainer) {
+            if (!noDataMessage || !tabsContainer || !tableContainer) {
                 console.error("Erro fatal: Elementos da UI não encontrados.");
                 showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
                 return;
@@ -280,25 +328,30 @@
             tabsContainer.innerHTML = '';
             tableContainer.innerHTML = '';
 
-            if (payments.length === 0) {
-                noPaymentsMessage.classList.remove('hidden');
+            if (payments.length === 0 && expenses.length === 0) {
+                noDataMessage.classList.remove('hidden');
                 return;
             } else {
-                noPaymentsMessage.classList.add('hidden');
+                noDataMessage.classList.add('hidden');
             }
 
-            // Agrupar pagamentos por mês e ano
-            const groupedPayments = payments.reduce((acc, payment) => {
-                const monthYear = `${payment.mes} de ${payment.ano}`;
+            // Agrupar pagamentos e despesas por mês e ano
+            const allData = [...payments, ...expenses];
+            const groupedData = allData.reduce((acc, item) => {
+                const monthYear = `${item.mes} de ${item.ano}`;
                 if (!acc[monthYear]) {
-                    acc[monthYear] = [];
+                    acc[monthYear] = { payments: [], expenses: [] };
                 }
-                acc[monthYear].push(payment);
+                if (item.valorReceita !== undefined) {
+                    acc[monthYear].payments.push(item);
+                } else {
+                    acc[monthYear].expenses.push(item);
+                }
                 return acc;
             }, {});
 
             // Ordenar os meses do mais recente para o mais antigo
-            const sortedMonths = Object.keys(groupedPayments).sort((a, b) => {
+            const sortedMonths = Object.keys(groupedData).sort((a, b) => {
                 const [monthA, yearA] = a.split(' de ');
                 const [monthB, yearB] = b.split(' de ');
 
@@ -311,11 +364,12 @@
 
             // Cria as abas e o conteúdo da tabela
             sortedMonths.forEach(monthYear => {
-                const monthPayments = groupedPayments[monthYear];
+                const monthData = groupedData[monthYear];
                 let totalReceitaMensal = 0;
                 let totalRateioMensal = 0;
+                let totalDespesaMensal = 0;
                 
-                // Calcular inadimplentes para este mês
+                // Calcular inadimplentes e totais de receita
                 const delinquentCounts = {
                     "Apartamento": TOTAL_UNITS["Apartamento"],
                     "Kitnet": TOTAL_UNITS["Kitnet"],
@@ -323,15 +377,20 @@
                 };
                 
                 // Decrementa o contador para cada pagamento encontrado
-                monthPayments.forEach(p => {
+                monthData.payments.forEach(p => {
                     delinquentCounts[p.tipoUnidade]--;
                     totalReceitaMensal += p.valorReceita;
                     totalRateioMensal += p.valorRateio;
                 });
+
+                // Calcula o total de despesas
+                monthData.expenses.forEach(e => {
+                    totalDespesaMensal += e.valor;
+                });
                 
                 // Ordenar os pagamentos de forma crescente por tipo e número da unidade
                 const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
-                monthPayments.sort((a, b) => {
+                monthData.payments.sort((a, b) => {
                     const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
                     const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
                     
@@ -357,6 +416,7 @@
                 tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
                 tableContent.className = "tab-content hidden";
 
+                // Adiciona o painel de resumo financeiro
                 const totalsDiv = document.createElement('div');
                 totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
                 totalsDiv.innerHTML = `
@@ -367,6 +427,14 @@
                     <div>
                         <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p>
                         <p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p>
+                        <p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
+                        <p class="text-xl font-bold text-green-600">${formatCurrency(totalReceitaMensal - totalDespesaMensal)}</p>
                     </div>
                 `;
                 tableContent.appendChild(totalsDiv);
@@ -390,11 +458,15 @@
                 `;
                 tableContent.appendChild(delinquentDiv);
 
-                // Cria a tabela
-                const table = document.createElement('table');
-                table.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
+                // --- Tabela de Pagamentos ---
+                const paymentTableTitle = document.createElement('h3');
+                paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+                paymentTableTitle.textContent = "Pagamentos Recebidos";
+                tableContent.appendChild(paymentTableTitle);
 
-                table.innerHTML = `
+                const paymentsTable = document.createElement('table');
+                paymentsTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mb-8";
+                paymentsTable.innerHTML = `
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th>
@@ -409,34 +481,82 @@
                     </tbody>
                 `;
 
-                // Adiciona as linhas da tabela
-                const tableBody = table.querySelector('tbody');
-                monthPayments.forEach(payment => {
-                    const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-50 transition-colors";
+                // Adiciona as linhas da tabela de pagamentos
+                const paymentTableBody = paymentsTable.querySelector('tbody');
+                if (monthData.payments.length > 0) {
+                    monthData.payments.forEach(payment => {
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-gray-50 transition-colors";
 
-                    const receita = formatCurrency(payment.valorReceita);
-                    const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
-                    const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
+                        const receita = formatCurrency(payment.valorReceita);
+                        const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+                        const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
 
-                    row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        `;
+                        paymentTableBody.appendChild(row);
+                    });
+                } else {
+                    paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
+                }
 
-                tableContent.appendChild(table);
+                tableContent.appendChild(paymentsTable);
+
+                // --- Tabela de Despesas ---
+                const expenseTableTitle = document.createElement('h3');
+                expenseTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+                expenseTableTitle.textContent = "Despesas Registradas";
+                tableContent.appendChild(expenseTableTitle);
+
+                const expensesTable = document.createElement('table');
+                expensesTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
+                expensesTable.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                `;
+
+                // Adiciona as linhas da tabela de despesas
+                const expenseTableBody = expensesTable.querySelector('tbody');
+                if (monthData.expenses.length > 0) {
+                    monthData.expenses.forEach(expense => {
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-gray-50 transition-colors";
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(expense.valor)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        `;
+                        expenseTableBody.appendChild(row);
+                    });
+                } else {
+                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
+                }
+                tableContent.appendChild(expensesTable);
                 tableContainer.appendChild(tableContent);
             });
 
@@ -516,11 +636,27 @@
                 }
 
                 await addDoc(paymentsCol, paymentData);
-                console.log("Documento adicionado com sucesso.");
+                console.log("Documento de pagamento adicionado com sucesso.");
                 showMessage("Pagamento registrado com sucesso!");
             } catch (error) {
-                console.error("Erro ao adicionar documento:", error);
+                console.error("Erro ao adicionar documento de pagamento:", error);
                 showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Função para registrar uma nova despesa no banco de dados
+        async function addExpense(expenseData) {
+            try {
+                showLoading();
+                const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                await addDoc(expensesCol, expenseData);
+                console.log("Documento de despesa adicionado com sucesso.");
+                showMessage("Despesa registrada com sucesso!");
+            } catch (error) {
+                console.error("Erro ao adicionar documento de despesa:", error);
+                showMessage("Erro ao registrar a despesa. Tente novamente.", true);
             } finally {
                 hideLoading();
             }
@@ -531,11 +667,26 @@
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
-                console.log("Documento removido com sucesso.");
+                console.log("Documento de pagamento removido com sucesso.");
                 showMessage("Pagamento removido com sucesso!");
             } catch (error) {
-                console.error("Erro ao deletar documento:", error);
+                console.error("Erro ao deletar documento de pagamento:", error);
                 showMessage("Erro ao deletar o pagamento.", true);
+            } finally {
+                hideLoading();
+            }
+        };
+
+        // Função para deletar uma despesa
+        window.deleteExpense = async (docId) => {
+            try {
+                showLoading();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
+                console.log("Documento de despesa removido com sucesso.");
+                showMessage("Despesa removida com sucesso!");
+            } catch (error) {
+                console.error("Erro ao deletar documento de despesa:", error);
+                showMessage("Erro ao deletar a despesa.", true);
             } finally {
                 hideLoading();
             }
@@ -549,12 +700,10 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
 
-                // Preenche o campo de ano com o ano atual
-                const paymentYearInput = document.getElementById('paymentYear');
+                // Preenche os campos de ano com o ano atual
                 const currentYear = new Date().getFullYear();
-                if (paymentYearInput) {
-                    paymentYearInput.value = currentYear;
-                }
+                document.getElementById('paymentYear').value = currentYear;
+                document.getElementById('expenseYear').value = currentYear;
 
                 // Autentica o usuário e, após o login, inicia a escuta em tempo real
                 onAuthStateChanged(auth, async (user) => {
@@ -563,18 +712,32 @@
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
 
+                        // Listener para pagamentos
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                        const unsubscribe = onSnapshot(paymentsCol, (snapshot) => {
+                        const paymentsUnsubscribe = onSnapshot(paymentsCol, (snapshot) => {
                             const payments = [];
                             snapshot.forEach(doc => {
                                 payments.push({ id: doc.id, ...doc.data() });
                             });
-                            console.log("Dados recebidos em tempo real. Total de pagamentos:", payments.length);
-                            renderPayments(payments);
-                            updateTotals(payments);
-                            hideLoading();
+                            console.log("Dados de pagamento recebidos em tempo real. Total:", payments.length);
+                            
+                            // Busca as despesas após receber os pagamentos
+                            getDocs(collection(db, `artifacts/${appId}/public/data/expenses`)).then(expenseSnapshot => {
+                                const expenses = [];
+                                expenseSnapshot.forEach(doc => {
+                                    expenses.push({ id: doc.id, ...doc.data() });
+                                });
+                                console.log("Dados de despesa recebidos. Total:", expenses.length);
+                                renderFinancialData(payments, expenses);
+                                updateTotals(payments);
+                                hideLoading();
+                            }).catch(error => {
+                                console.error("Erro ao buscar despesas:", error);
+                                showMessage("Erro de sincronização com o banco de dados.", true);
+                                hideLoading();
+                            });
                         }, (error) => {
-                            console.error("Erro ao ouvir atualizações:", error);
+                            console.error("Erro ao ouvir atualizações de pagamentos:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
                             hideLoading();
                         });
@@ -627,6 +790,33 @@
                     });
                 } else {
                     console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                }
+
+                const expenseForm = document.getElementById('expenseForm');
+                if (expenseForm) {
+                    expenseForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        const description = document.getElementById('expenseDescription').value;
+                        const value = parseFloat(document.getElementById('expenseValue').value);
+                        const month = document.getElementById('expenseMonth').value;
+                        const year = parseInt(document.getElementById('expenseYear').value);
+
+                        const newExpense = {
+                            descricao: description,
+                            valor: value,
+                            mes: month,
+                            ano: year,
+                            dataRegistro: new Date()
+                        };
+
+                        await addExpense(newExpense);
+
+                        expenseForm.reset();
+                        document.getElementById('expenseYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
                 }
 
             } catch (error) {
