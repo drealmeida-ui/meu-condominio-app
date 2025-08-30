@@ -264,6 +264,8 @@
         let db;
         let isAuthReady = false;
         let currentActiveTab = '';
+        let allPayments = [];
+        let allExpenses = [];
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -589,7 +591,7 @@
                 }
             });
         }
-
+        
         // Função para atualizar os totais na UI
         function updateTotals(payments) {
             const totalReceitaElement = document.getElementById('totalReceita');
@@ -612,6 +614,13 @@
             totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             totalGeralElement.innerText = (totalReceita + totalRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Função para renderizar todos os dados no UI
+        function renderAllData() {
+            renderFinancialData(allPayments, allExpenses);
+            updateTotals(allPayments);
+            hideLoading();
         }
 
         // Função para registrar um novo pagamento no banco de dados
@@ -714,30 +723,24 @@
 
                         // Listener para pagamentos
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                        const paymentsUnsubscribe = onSnapshot(paymentsCol, (snapshot) => {
-                            const payments = [];
-                            snapshot.forEach(doc => {
-                                payments.push({ id: doc.id, ...doc.data() });
-                            });
-                            console.log("Dados de pagamento recebidos em tempo real. Total:", payments.length);
-                            
-                            // Busca as despesas após receber os pagamentos
-                            getDocs(collection(db, `artifacts/${appId}/public/data/expenses`)).then(expenseSnapshot => {
-                                const expenses = [];
-                                expenseSnapshot.forEach(doc => {
-                                    expenses.push({ id: doc.id, ...doc.data() });
-                                });
-                                console.log("Dados de despesa recebidos. Total:", expenses.length);
-                                renderFinancialData(payments, expenses);
-                                updateTotals(payments);
-                                hideLoading();
-                            }).catch(error => {
-                                console.error("Erro ao buscar despesas:", error);
-                                showMessage("Erro de sincronização com o banco de dados.", true);
-                                hideLoading();
-                            });
+                        onSnapshot(paymentsCol, (snapshot) => {
+                            allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
+                            renderAllData(); // Chamada para renderizar
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações de pagamentos:", error);
+                            showMessage("Erro de sincronização com o banco de dados.", true);
+                            hideLoading();
+                        });
+
+                        // NOVO: Listener para despesas
+                        const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                        onSnapshot(expensesCol, (snapshot) => {
+                            allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
+                            renderAllData(); // Chamada para renderizar
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações de despesas:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
                             hideLoading();
                         });
