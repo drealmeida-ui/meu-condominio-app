@@ -168,7 +168,7 @@
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
                     <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
-               
+                
                 <!-- Campo de Mês da Despesa -->
                 <div>
                     <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
@@ -208,19 +208,19 @@
                 <h2 class="text-2xl font-bold text-gray-800">Balanço Mensal</h2>
             </div>
 
-            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum dado registrado ainda.</p>
-
-            <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
-                <!-- Abas dos meses serão inseridas aqui pelo JS -->
+            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum pagamento ou despesa registrado ainda. Adicione um acima para começar.</p>
+            
+            <!-- Contêiner para as Abas -->
+            <div id="tabsContainer" class="flex flex-wrap gap-2 p-4 border-b border-gray-200 justify-center">
             </div>
 
-            <div id="financialTableContainer" class="p-4 overflow-x-auto">
-                <!-- Conteúdo financeiro será inserido aqui pelo JS -->
+            <!-- Contêiner para o Conteúdo das Tabelas -->
+            <div id="financialTableContainer" class="p-4">
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs e Script -->
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -229,7 +229,14 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const firebaseConfig = {
+          apiKey: "AIzaSyD_ruv-FFVXHmkYudaI0Mq-N-xU2y4EBDM",
+          authDomain: "controlepiramide.firebaseapp.com",
+          projectId: "controlepiramide",
+          storageBucket: "controlepiramide.firebasestorage.app",
+          messagingSenderId: "753496447014",
+          appId: "1:753496447014:web:aa9cde68924dc445466ee7"
+        };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -247,7 +254,7 @@
             "Kitnet": 10,
             "Sala Comercial": 16
         };
-       
+        
         const unitTypeDisplay = {
           "Apartamento": "Apto.",
           "Kitnet": "Kitnet",
@@ -255,19 +262,12 @@
         };
 
         let db;
-        let auth;
         let isAuthReady = false;
         let currentActiveTab = '';
         let allPayments = [];
         let allExpenses = [];
-        let userId = 'anon-user';
 
-        // Expõe funções ao escopo global para o HTML
-        window.deletePayment = deletePayment;
-        window.deleteExpense = deleteExpense;
-        window.switchTab = switchTab;
-
-        // Função para mostrar a mensagem de feedback na tela (sucesso ou erro)
+        // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
             hideLoading();
             const modal = document.getElementById('messageModal');
@@ -276,312 +276,490 @@
             const text = document.getElementById('messageText');
             const button = modal.querySelector('button');
 
-            text.innerHTML = message;
+            text.innerText = message;
 
             if (isError) {
                 content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-red-50 border border-red-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-                icon.classList.add('text-red-500');
-                text.classList.add('text-red-700');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" class="text-red-500"/>';
                 button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600';
             } else {
                 content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-green-50 border border-green-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-                icon.classList.add('text-green-500');
-                text.classList.add('text-green-700');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" class="text-green-500"/>';
                 button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-green-500 hover:bg-green-600';
             }
             modal.classList.remove('hidden');
         }
 
-        // Funções para gerenciar o estado de carregamento
+        // Funções para mostrar/esconder o loading
         function showLoading() {
             document.getElementById('loadingMessage').classList.remove('hidden');
         }
-
         function hideLoading() {
             document.getElementById('loadingMessage').classList.add('hidden');
         }
 
-        // Função para formatar números como moeda brasileira (R$)
+        // Formata um valor numérico para o padrão de moeda R$
         function formatCurrency(value) {
-            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Função para gerar o conteúdo HTML da tabela financeira
-        function generateFinancialTable(payments, expenses) {
-            if (payments.length === 0 && expenses.length === 0) {
-                document.getElementById('noDataMessage').classList.remove('hidden');
-                document.getElementById('financialTableContainer').innerHTML = '';
-                return;
-            }
-            document.getElementById('noDataMessage').classList.add('hidden');
+        // Renderiza as abas e as tabelas financeiras com base nos dados
+        function renderFinancialData(payments, expenses) {
+            const tableContainer = document.getElementById('financialTableContainer');
+            const tabsContainer = document.getElementById('tabsContainer');
+            const noDataMessage = document.getElementById('noDataMessage');
 
-            const tableHtml = `
-                <table class="min-w-full divide-y divide-gray-200">
+            tableContainer.innerHTML = '';
+            tabsContainer.innerHTML = '';
+
+            if (payments.length === 0 && expenses.length === 0) {
+                noDataMessage.classList.remove('hidden');
+                return;
+            } else {
+                noDataMessage.classList.add('hidden');
+            }
+
+            const groupedData = {};
+
+            // Agrupa pagamentos por mês e ano
+            payments.forEach(p => {
+                const key = `${p.mes}-${p.ano}`;
+                if (!groupedData[key]) {
+                    groupedData[key] = {
+                        payments: [],
+                        expenses: [],
+                        totalPayments: 0,
+                        totalExpenses: 0
+                    };
+                }
+                groupedData[key].payments.push(p);
+                groupedData[key].totalPayments += (p.valorReceita + p.valorRateio);
+            });
+
+            // Agrupa despesas por mês e ano
+            expenses.forEach(e => {
+                const key = `${e.mes}-${e.ano}`;
+                if (!groupedData[key]) {
+                    groupedData[key] = {
+                        payments: [],
+                        expenses: [],
+                        totalPayments: 0,
+                        totalExpenses: 0
+                    };
+                }
+                groupedData[key].expenses.push(e);
+                groupedData[key].totalExpenses += e.valor;
+            });
+
+            // Ordena os meses do mais recente para o mais antigo
+            const sortedMonths = Object.keys(groupedData).sort((a, b) => {
+                const [monthA, yearA] = a.split('-');
+                const [monthB, yearB] = b.split('-');
+                const indexA = MESES.indexOf(monthA);
+                const indexB = MESES.indexOf(monthB);
+
+                if (parseInt(yearB) !== parseInt(yearA)) {
+                    return parseInt(yearB) - parseInt(yearA);
+                }
+                return indexB - indexA;
+            });
+
+            // Cria as abas e os conteúdos das tabelas
+            sortedMonths.forEach(monthKey => {
+                const monthData = groupedData[monthKey];
+                const [month, year] = monthKey.split('-');
+                const tabButtonId = `tab-${month}-${year}`;
+                const tableContentId = `content-${month}-${year}`;
+                const saldo = monthData.totalPayments - monthData.totalExpenses;
+                const saldoClass = saldo >= 0 ? 'text-green-600' : 'text-red-600';
+                
+                // Cria o botão da aba
+                const tabButton = document.createElement('button');
+                tabButton.className = "tab-button px-4 py-2 text-sm font-semibold rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500";
+                tabButton.setAttribute('data-target', tableContentId);
+                tabButton.textContent = `${month} de ${year}`;
+                tabsContainer.appendChild(tabButton);
+
+                // Cria o contêiner do conteúdo da tabela
+                const tableContent = document.createElement('div');
+                tableContent.id = tableContentId;
+                tableContent.className = 'hidden';
+
+                // Título de saldo
+                const saldoTitle = document.createElement('h3');
+                saldoTitle.className = "text-xl font-bold text-gray-800 my-4 text-center";
+                saldoTitle.innerHTML = `Saldo do Mês: <span class="${saldoClass}">${formatCurrency(saldo)}</span>`;
+                tableContent.appendChild(saldoTitle);
+                
+                // --- Tabela de Pagamentos ---
+                const paymentTableTitle = document.createElement('h3');
+                paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+                paymentTableTitle.textContent = "Pagamentos Recebidos";
+                tableContent.appendChild(paymentTableTitle);
+
+                const paymentsTable = document.createElement('table');
+                paymentsTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mb-8";
+                paymentsTable.innerHTML = `
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Ações</span></th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Taxa</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rateio</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        ${payments.map(item => `
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.unitNumber ? `Pagamento Apto. ${item.unitNumber} - ${unitTypeDisplay[item.unitType]}` : 'N/A'}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">Receita</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">${formatCurrency(item.value)}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.month}/${item.year}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onclick="deletePayment('${item.id}')" class="text-red-600 hover:text-red-900 transition-colors">Excluir</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                        ${expenses.map(item => `
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.description}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">Despesa</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(item.value)}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.month}/${item.year}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onclick="deleteExpense('${item.id}')" class="text-red-600 hover:text-red-900 transition-colors">Excluir</button>
-                                </td>
-                            </tr>
-                        `).join('')}
                     </tbody>
-                </table>
-            `;
-            document.getElementById('financialTableContainer').innerHTML = tableHtml;
-        }
-
-        // Função para atualizar os totais de resumo
-        function updateTotals(payments, expenses) {
-            const totalReceita = payments.reduce((sum, item) => sum + item.value, 0);
-            const totalRateio = payments.filter(p => p.rateio).reduce((sum, item) => sum + PRECO_RATEIO, 0);
-            const totalDespesa = expenses.reduce((sum, item) => sum + item.value, 0);
-            const totalGeral = totalReceita - totalDespesa;
-
-            document.getElementById('totalReceita').innerText = formatCurrency(totalReceita);
-            document.getElementById('totalRateio').innerText = formatCurrency(totalRateio);
-            document.getElementById('totalGeral').innerText = formatCurrency(totalGeral);
-        }
-
-        // Função para renderizar as abas dos meses
-        function renderTabs(payments, expenses) {
-            const tabsContainer = document.getElementById('tabsContainer');
-            const allDates = [...payments, ...expenses].map(item => `${item.year}-${MESES.indexOf(item.month)}`);
-            const uniqueDates = [...new Set(allDates)].sort().reverse();
-            
-            tabsContainer.innerHTML = uniqueDates.map(date => {
-                const [year, monthIndex] = date.split('-');
-                const month = MESES[parseInt(monthIndex)];
-                const isActive = `${month}-${year}` === currentActiveTab;
-                return `
-                    <button id="tab-${month}-${year}" onclick="switchTab('${month}', '${year}')" 
-                        class="tab-button px-4 py-2 mr-2 mb-2 rounded-lg font-semibold border-2 border-transparent ${isActive ? 'active' : 'text-gray-600 bg-white hover:bg-gray-200'}">
-                        ${month}/${year}
-                    </button>
                 `;
-            }).join('');
 
-            // Se não houver aba ativa, selecione a primeira
-            if (!currentActiveTab && uniqueDates.length > 0) {
-                const [year, monthIndex] = uniqueDates[0].split('-');
-                switchTab(MESES[parseInt(monthIndex)], year);
-            }
-        }
+                // Adiciona as linhas da tabela de pagamentos
+                const paymentTableBody = paymentsTable.querySelector('tbody');
+                if (monthData.payments.length > 0) {
+                    monthData.payments.forEach(payment => {
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-gray-50 transition-colors";
 
-        // Função para alternar entre as abas e filtrar os dados
-        function switchTab(month, year) {
-            const newActiveTab = `${month}-${year}`;
-            
-            if (currentActiveTab) {
-                const oldButton = document.getElementById(`tab-${currentActiveTab.replace('-', '-')}`);
-                if (oldButton) oldButton.classList.remove('active');
-            }
-            
-            currentActiveTab = newActiveTab;
-            const newButton = document.getElementById(`tab-${month}-${year}`);
-            if (newButton) newButton.classList.add('active');
+                        const receita = formatCurrency(payment.valorReceita);
+                        const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+                        const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
 
-            const filteredPayments = allPayments.filter(p => p.month === month && p.year === parseInt(year));
-            const filteredExpenses = allExpenses.filter(e => e.month === month && e.year === parseInt(year));
-            
-            generateFinancialTable(filteredPayments, filteredExpenses);
-            updateTotals(filteredPayments, filteredExpenses);
-        }
-
-        // Inicialização do Firebase e autenticação
-        async function initializeFirebase() {
-            showLoading();
-            try {
-                if (!firebaseConfig) {
-                    throw new Error("Firebase configuration is missing.");
-                }
-
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                
-                setLogLevel('debug');
-                
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        `;
+                        paymentTableBody.appendChild(row);
+                    });
                 } else {
-                    await signInAnonymously(auth);
+                    paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
                 }
 
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        isAuthReady = true;
+                tableContent.appendChild(paymentsTable);
 
-                        // Listener para pagamentos (receita)
-                        const paymentsCollection = collection(db, 'artifacts', appId, 'users', userId, 'payments');
-                        onSnapshot(paymentsCollection, (snapshot) => {
-                            allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            renderTabs(allPayments, allExpenses);
-                        });
+                // --- Tabela de Despesas ---
+                const expenseTableTitle = document.createElement('h3');
+                expenseTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+                expenseTableTitle.textContent = "Despesas Registradas";
+                tableContent.appendChild(expenseTableTitle);
 
-                        // Listener para despesas (agora em tempo real)
-                        const expensesCollection = collection(db, 'artifacts', appId, 'users', userId, 'expenses');
-                        onSnapshot(expensesCollection, (snapshot) => {
-                            allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            renderTabs(allPayments, allExpenses);
-                        });
+                const expensesTable = document.createElement('table');
+                expensesTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
+                expensesTable.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                `;
 
-                    } else {
-                        isAuthReady = true;
-                        console.log("Usuário não autenticado. Operando em modo anônimo.");
+                // Adiciona as linhas da tabela de despesas
+                const expenseTableBody = expensesTable.querySelector('tbody');
+                if (monthData.expenses.length > 0) {
+                    monthData.expenses.forEach(expense => {
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-gray-50 transition-colors";
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(expense.valor)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        `;
+                        expenseTableBody.appendChild(row);
+                    });
+                } else {
+                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
+                }
+                tableContent.appendChild(expensesTable);
+                tableContainer.appendChild(tableContent);
+            });
+
+            // Ativa a primeira aba (mais recente) por padrão
+            const firstTabButton = tabsContainer.querySelector('.tab-button');
+            if (firstTabButton) {
+                firstTabButton.classList.add('active');
+                const targetId = firstTabButton.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+                currentActiveTab = targetId;
+            }
+
+            // Adiciona o listener para a troca de abas
+            tabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-button')) {
+                    const targetId = e.target.getAttribute('data-target');
+
+                    // Esconde a aba anterior
+                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
+                        document.getElementById(currentActiveTab).classList.add('hidden');
                     }
-                    hideLoading();
-                });
+
+                    // Remove a classe 'active' de todos os botões de aba
+                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+
+                    // Mostra a nova aba e ativa o botão
+                    document.getElementById(targetId).classList.remove('hidden');
+                    e.target.classList.add('active');
+                    currentActiveTab = targetId;
+                }
+            });
+        }
+        
+        // Função para atualizar os totais na UI
+        function updateTotals(payments) {
+            const totalReceitaElement = document.getElementById('totalReceita');
+            const totalRateioElement = document.getElementById('totalRateio');
+            const totalGeralElement = document.getElementById('totalGeral');
+
+            if (!totalReceitaElement || !totalRateioElement || !totalGeralElement) {
+                console.error("Erro: Elementos da UI de total não encontrados.");
+                return;
+            }
+
+            let totalReceita = 0;
+            let totalRateio = 0;
+
+            payments.forEach(payment => {
+                totalReceita += payment.valorReceita;
+                totalRateio += payment.valorRateio;
+            });
+
+            totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            totalGeralElement.innerText = (totalReceita + totalRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Função para renderizar todos os dados no UI
+        function renderAllData() {
+            renderFinancialData(allPayments, allExpenses);
+            updateTotals(allPayments);
+            hideLoading();
+        }
+
+        // Função para registrar um novo pagamento no banco de dados
+        async function addPayment(paymentData) {
+            try {
+                showLoading();
+                const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+
+                // Verifica se já existe um pagamento para a mesma unidade, mês e ano
+                const q = query(paymentsCol,
+                    where("unidade", "==", paymentData.unidade),
+                    where("tipoUnidade", "==", paymentData.tipoUnidade),
+                    where("mes", "==", paymentData.mes),
+                    where("ano", "==", paymentData.ano)
+                );
+
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${unitTypeDisplay[paymentData.tipoUnidade]} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
+                    return;
+                }
+
+                await addDoc(paymentsCol, paymentData);
+                console.log("Documento de pagamento adicionado com sucesso.");
+                showMessage("Pagamento registrado com sucesso!");
             } catch (error) {
-                console.error("Erro ao inicializar Firebase:", error);
-                showMessage("Erro ao conectar com o banco de dados. Por favor, tente recarregar a página. Detalhes: " + error.message, true);
+                console.error("Erro ao adicionar documento de pagamento:", error);
+                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
+            } finally {
                 hideLoading();
             }
         }
 
-        // Funções para adicionar e excluir dados
-        async function addPayment(e) {
-            e.preventDefault();
-            if (!isAuthReady) {
-                showMessage("Aguardando autenticação...", true);
-                return;
-            }
-
-            const paymentForm = document.getElementById('paymentForm');
-            const unitNumber = paymentForm.unitNumber.value;
-            const unitType = paymentForm.unitType.value;
-            const paymentType = paymentForm.paymentType.value;
-            const month = paymentForm.paymentMonth.value;
-            const year = parseInt(paymentForm.paymentYear.value);
-            const rateio = paymentForm.rateioPaid.checked;
-            
-            const value = PRECOS[unitType][paymentType === 'Normal' ? 'normal' : 'a_vista'];
-
-            showLoading();
-
+        // Função para registrar uma nova despesa no banco de dados
+        async function addExpense(expenseData) {
             try {
-                const paymentsCollection = collection(db, 'artifacts', appId, 'users', userId, 'payments');
-                await addDoc(paymentsCollection, {
-                    unitNumber: unitNumber,
-                    unitType: unitType,
-                    paymentType: paymentType,
-                    month: month,
-                    year: year,
-                    rateio: rateio,
-                    value: value,
-                    createdAt: new Date()
-                });
-                showMessage("Pagamento registrado com sucesso!");
-                paymentForm.reset();
-            } catch (error) {
-                console.error("Erro ao registrar pagamento:", error);
-                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
-            }
-        }
-
-        async function addExpense(e) {
-            e.preventDefault();
-            if (!isAuthReady) {
-                showMessage("Aguardando autenticação...", true);
-                return;
-            }
-
-            const expenseForm = document.getElementById('expenseForm');
-            const description = expenseForm.expenseDescription.value;
-            const value = parseFloat(expenseForm.expenseValue.value);
-            const month = expenseForm.expenseMonth.value;
-            const year = parseInt(expenseForm.expenseYear.value);
-
-            showLoading();
-
-            try {
-                const expensesCollection = collection(db, 'artifacts', appId, 'users', userId, 'expenses');
-                await addDoc(expensesCollection, {
-                    description: description,
-                    value: value,
-                    month: month,
-                    year: year,
-                    createdAt: new Date()
-                });
+                showLoading();
+                const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                await addDoc(expensesCol, expenseData);
+                console.log("Documento de despesa adicionado com sucesso.");
                 showMessage("Despesa registrada com sucesso!");
-                expenseForm.reset();
             } catch (error) {
-                console.error("Erro ao registrar despesa:", error);
+                console.error("Erro ao adicionar documento de despesa:", error);
                 showMessage("Erro ao registrar a despesa. Tente novamente.", true);
+            } finally {
+                hideLoading();
             }
         }
 
-        async function deletePayment(id) {
-            if (!isAuthReady) {
-                showMessage("Aguardando autenticação...", true);
-                return;
-            }
-            // Não usamos o window.confirm, mas sim uma modal customizada
-            showMessage("Tem certeza que deseja excluir este pagamento?<br><button onclick='confirmDelete(\"payment\", \"" + id + "\")' class='mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600'>Sim, Excluir</button>");
-        }
-
-        async function deleteExpense(id) {
-            if (!isAuthReady) {
-                showMessage("Aguardando autenticação...", true);
-                return;
-            }
-            // Não usamos o window.confirm, mas sim uma modal customizada
-            showMessage("Tem certeza que deseja excluir esta despesa?<br><button onclick='confirmDelete(\"expense\", \"" + id + "\")' class='mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600'>Sim, Excluir</button>");
-        }
-        
-        // Função de confirmação para a modal
-        window.confirmDelete = async function(type, id) {
-            document.getElementById('messageModal').classList.add('hidden');
-            showLoading();
+        // Função para deletar um pagamento
+        window.deletePayment = async (docId) => {
             try {
-                if (type === "payment") {
-                    const paymentDoc = doc(db, 'artifacts', appId, 'users', userId, 'payments', id);
-                    await deleteDoc(paymentDoc);
-                    showMessage("Pagamento excluído com sucesso!");
-                } else if (type === "expense") {
-                    const expenseDoc = doc(db, 'artifacts', appId, 'users', userId, 'expenses', id);
-                    await deleteDoc(expenseDoc);
-                    showMessage("Despesa excluída com sucesso!");
-                }
+                showLoading();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
+                console.log("Documento de pagamento removido com sucesso.");
+                showMessage("Pagamento removido com sucesso!");
             } catch (error) {
-                console.error("Erro ao excluir item:", error);
-                showMessage("Erro ao excluir o item. Tente novamente.", true);
+                console.error("Erro ao deletar documento de pagamento:", error);
+                showMessage("Erro ao deletar o pagamento.", true);
+            } finally {
+                hideLoading();
             }
         };
-       
-        // Event listeners para os formulários
-        document.getElementById('paymentForm').addEventListener('submit', addPayment);
-        document.getElementById('expenseForm').addEventListener('submit', addExpense);
 
-        // Inicia a aplicação
-        initializeFirebase();
+        // Função para deletar uma despesa
+        window.deleteExpense = async (docId) => {
+            try {
+                showLoading();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
+                console.log("Documento de despesa removido com sucesso.");
+                showMessage("Despesa removida com sucesso!");
+            } catch (error) {
+                console.error("Erro ao deletar documento de despesa:", error);
+                showMessage("Erro ao deletar a despesa.", true);
+            } finally {
+                hideLoading();
+            }
+        };
+        
+        // Função principal que inicializa o aplicativo
+        async function main() {
+            try {
+                setLogLevel('debug');
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Preenche os campos de ano com o ano atual
+                const currentYear = new Date().getFullYear();
+                document.getElementById('paymentYear').value = currentYear;
+                document.getElementById('expenseYear').value = currentYear;
+
+                // Autentica o usuário e, após o login, inicia a escuta em tempo real
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        isAuthReady = true;
+                        console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
+                        showLoading();
+
+                        // Listener para pagamentos
+                        const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+                        onSnapshot(paymentsCol, (snapshot) => {
+                            allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
+                            renderAllData(); // Chamada para renderizar
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações de pagamentos:", error);
+                            showMessage("Erro de sincronização com o banco de dados.", true);
+                            hideLoading();
+                        });
+
+                        // NOVO: Listener para despesas
+                        const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                        onSnapshot(expensesCol, (snapshot) => {
+                            allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
+                            renderAllData(); // Chamada para renderizar
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações de despesas:", error);
+                            showMessage("Erro de sincronização com o banco de dados.", true);
+                            hideLoading();
+                        });
+
+                    } else {
+                        console.log("Usuário não autenticado. Iniciando o processo de login.");
+                        if (initialAuthToken) {
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (e) {
+                                console.error("Erro ao autenticar com token:", e);
+                                showMessage("Erro de autenticação. Verifique as configurações.", true);
+                            }
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+
+                const paymentForm = document.getElementById('paymentForm');
+                if (paymentForm) {
+                    paymentForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        const unitNumber = document.getElementById('unitNumber').value;
+                        const unitType = document.getElementById('unitType').value;
+                        const paymentType = document.getElementById('paymentType').value;
+                        const paymentMonth = document.getElementById('paymentMonth').value;
+                        const paymentYear = parseInt(document.getElementById('paymentYear').value);
+                        const rateioPaid = document.getElementById('rateioPaid').checked;
+
+                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
+                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+
+                        const newPayment = {
+                            unidade: unitNumber,
+                            tipoUnidade: unitType,
+                            tipoPagamento: paymentType,
+                            mes: paymentMonth,
+                            ano: paymentYear,
+                            valorReceita: valorReceita,
+                            valorRateio: valorRateio,
+                            dataRegistro: new Date()
+                        };
+
+                        await addPayment(newPayment);
+
+                        paymentForm.reset();
+                        document.getElementById('paymentYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                }
+
+                const expenseForm = document.getElementById('expenseForm');
+                if (expenseForm) {
+                    expenseForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        const description = document.getElementById('expenseDescription').value;
+                        const value = parseFloat(document.getElementById('expenseValue').value);
+                        const month = document.getElementById('expenseMonth').value;
+                        const year = parseInt(document.getElementById('expenseYear').value);
+
+                        const newExpense = {
+                            descricao: description,
+                            valor: value,
+                            mes: month,
+                            ano: year,
+                            dataRegistro: new Date()
+                        };
+
+                        await addExpense(newExpense);
+
+                        expenseForm.reset();
+                        document.getElementById('expenseYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
+                }
+
+            } catch (error) {
+                console.error("Erro na inicialização do Firebase:", error);
+                showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
 </html>
