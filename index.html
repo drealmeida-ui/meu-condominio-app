@@ -166,7 +166,8 @@
                 <!-- Campo de Valor da Despesa -->
                 <div>
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
-                    <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                    <!-- ALTERADO: type="text" e adicionado oninput para formatação em tempo real -->
+                    <input type="text" id="expenseValue" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors" oninput="formatExpenseValue(this)">
                 </div>
                 
                 <!-- Campo de Mês da Despesa -->
@@ -314,6 +315,51 @@
         function formatCurrency(value) {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
+
+        // NOVO: Função para formatar o valor da despesa enquanto digita
+        function formatExpenseValue(input) {
+            let value = input.value;
+
+            // Remove tudo que não for número (exceto a vírgula/ponto decimal)
+            // Permite apenas dígitos e uma vírgula para o separador decimal
+            value = value.replace(/[^0-9,]/g, '');
+
+            // Garante que haja apenas uma vírgula
+            const parts = value.split(',');
+            if (parts.length > 2) {
+                value = parts[0] + ',' + parts.slice(1).join('');
+            }
+
+            // Converte para número para garantir que é um valor válido
+            // Substitui a vírgula por ponto para que parseFloat funcione corretamente
+            let numericValue = parseFloat(value.replace(',', '.'));
+
+            if (isNaN(numericValue)) {
+                input.value = ''; // Limpa se não for um número válido
+                return;
+            }
+
+            // Formata como moeda BRL
+            // Usa um NumberFormat para controlar o número de casas decimais
+            const formatter = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            // Para evitar que o R$ apareça enquanto o usuário digita,
+            // formatamos apenas o número e adicionamos o R$ no final,
+            // ou deixamos o R$ se o campo estiver vazio ou for 0
+            if (value === '' || numericValue === 0) {
+                input.value = ''; // Ou 'R$ 0,00' se preferir
+            } else {
+                // Remove o R$ e os espaços para que o usuário possa continuar digitando
+                let formatted = formatter.format(numericValue);
+                input.value = formatted;
+            }
+        }
+
 
         // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
@@ -801,13 +847,19 @@
                         e.preventDefault();
 
                         const description = document.getElementById('expenseDescription').value;
-                        const value = parseFloat(document.getElementById('expenseValue').value);
+                        let valueInput = document.getElementById('expenseValue').value; // Pega o valor formatado
+
+                        // NOVO: Desformata o valor antes de converter para float
+                        // Remove R$, espaços, pontos de milhar e troca vírgula por ponto decimal
+                        valueInput = valueInput.replace(/[R$\s.]/g, '').replace(',', '.');
+                        const value = parseFloat(valueInput); // Converte para float
+
                         const month = document.getElementById('expenseMonth').value;
                         const year = parseInt(document.getElementById('expenseYear').value);
 
                         const newExpense = {
                             descricao: description,
-                            valor: value,
+                            valor: value, // Agora 'value' é o número puro
                             mes: month,
                             ano: year,
                             dataRegistro: new Date()
