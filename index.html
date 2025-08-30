@@ -74,19 +74,19 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
                 <p class="text-gray-500 font-semibold text-lg">Receita Total</p>
-                <p id="totalReceita" class="text-blue-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+                <p id="totalReceita" class="text-blue-600 font-extrabold text-2xl mt-1">R$ 0,00</p>
             </div>
             <div class="bg-purple-50 rounded-xl p-6 text-center border-2 border-purple-200">
                 <p class="text-gray-500 font-semibold text-lg">Total Rateio</p>
-                <p id="totalRateio" class="text-purple-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+                <p id="totalRateio" class="text-purple-600 font-extrabold text-2xl mt-1">R$ 0,00</p>
             </div>
             <div class="bg-red-50 rounded-xl p-6 text-center border-2 border-red-200">
                 <p class="text-gray-500 font-semibold text-lg">Total Despesas</p>
-                <p id="totalDespesa" class="text-red-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+                <p id="totalDespesa" class="text-red-600 font-extrabold text-2xl mt-1">R$ 0,00</p>
             </div>
             <div class="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
                 <p class="text-gray-500 font-semibold text-lg">Balanço Geral</p>
-                <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+                <p id="totalGeral" class="font-extrabold text-2xl mt-1">R$ 0,00</p>
             </div>
         </div>
 
@@ -717,10 +717,21 @@
                 totalDespesa += expense.valor;
             });
 
-            totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalDespesaElement.innerText = totalDespesa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalGeralElement.innerText = (totalReceita + totalRateio - totalDespesa).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const totalGeral = totalReceita + totalRateio - totalDespesa;
+
+            // Atualiza o texto dos elementos
+            totalReceitaElement.innerText = formatCurrency(totalReceita);
+            totalRateioElement.innerText = formatCurrency(totalRateio);
+            totalDespesaElement.innerText = formatCurrency(totalDespesa);
+            totalGeralElement.innerText = formatCurrency(totalGeral);
+
+            // NOVO: Altera a cor do balanço geral com base no valor
+            totalGeralElement.classList.remove('text-green-600', 'text-red-600');
+            if (totalGeral >= 0) {
+                totalGeralElement.classList.add('text-green-600');
+            } else {
+                totalGeralElement.classList.add('text-red-600');
+            }
         }
 
         // Função para renderizar todos os dados no UI
