@@ -168,7 +168,7 @@
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
                     <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
-                
+               
                 <!-- Campo de Mês da Despesa -->
                 <div>
                     <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
@@ -229,14 +229,7 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
-        const firebaseConfig = {
-          apiKey: "AIzaSyD_ruv-FFVXHmkYudaI0Mq-N-xU2y4EBDM",
-          authDomain: "controlepiramide.firebaseapp.com",
-          projectId: "controlepiramide",
-          storageBucket: "controlepiramide.firebasestorage.app",
-          messagingSenderId: "753496447014",
-          appId: "1:753496447014:web:aa9cde68924dc445466ee7"
-        };
+        const firebaseConfig = JSON.parse(__firebase_config);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -254,7 +247,7 @@
             "Kitnet": 10,
             "Sala Comercial": 16
         };
-        
+       
         const unitTypeDisplay = {
           "Apartamento": "Apto.",
           "Kitnet": "Kitnet",
@@ -262,12 +255,19 @@
         };
 
         let db;
+        let auth;
         let isAuthReady = false;
         let currentActiveTab = '';
         let allPayments = [];
         let allExpenses = [];
+        let userId = 'anon-user';
 
-        // Exibe uma mensagem de feedback na tela (sucesso ou erro)
+        // Expõe funções ao escopo global para o HTML
+        window.deletePayment = deletePayment;
+        window.deleteExpense = deleteExpense;
+        window.switchTab = switchTab;
+
+        // Função para mostrar a mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
             hideLoading();
             const modal = document.getElementById('messageModal');
@@ -294,541 +294,287 @@
             modal.classList.remove('hidden');
         }
 
-        // Função para mostrar a mensagem de carregamento
+        // Funções para gerenciar o estado de carregamento
         function showLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            if (loadingMessage) {
-                loadingMessage.classList.remove('hidden');
-            }
+            document.getElementById('loadingMessage').classList.remove('hidden');
         }
 
-        // Função para esconder a mensagem de carregamento
         function hideLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            if (loadingMessage) {
-                loadingMessage.classList.add('hidden');
-            }
+            document.getElementById('loadingMessage').classList.add('hidden');
         }
 
-        // Função para formatar um número para moeda BRL
+        // Função para formatar números como moeda brasileira (R$)
         function formatCurrency(value) {
-            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
         }
 
-        // Função para renderizar os dados financeiros (pagamentos e despesas)
-        function renderFinancialData(payments, expenses) {
-            const noDataMessage = document.getElementById('noDataMessage');
-            const tabsContainer = document.getElementById('tabsContainer');
-            const tableContainer = document.getElementById('financialTableContainer');
-
-            if (!noDataMessage || !tabsContainer || !tableContainer) {
-                console.error("Erro fatal: Elementos da UI não encontrados.");
-                showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
-                return;
-            }
-
-            tabsContainer.innerHTML = '';
-            tableContainer.innerHTML = '';
-
+        // Função para gerar o conteúdo HTML da tabela financeira
+        function generateFinancialTable(payments, expenses) {
             if (payments.length === 0 && expenses.length === 0) {
-                noDataMessage.classList.remove('hidden');
+                document.getElementById('noDataMessage').classList.remove('hidden');
+                document.getElementById('financialTableContainer').innerHTML = '';
                 return;
-            } else {
-                noDataMessage.classList.add('hidden');
             }
+            document.getElementById('noDataMessage').classList.add('hidden');
 
-            // Agrupar pagamentos e despesas por mês e ano
-            const allData = [...payments, ...expenses];
-            const groupedData = allData.reduce((acc, item) => {
-                const monthYear = `${item.mes} de ${item.ano}`;
-                if (!acc[monthYear]) {
-                    acc[monthYear] = { payments: [], expenses: [] };
-                }
-                if (item.valorReceita !== undefined) {
-                    acc[monthYear].payments.push(item);
-                } else {
-                    acc[monthYear].expenses.push(item);
-                }
-                return acc;
-            }, {});
-
-            // Ordenar os meses do mais recente para o mais antigo
-            const sortedMonths = Object.keys(groupedData).sort((a, b) => {
-                const [monthA, yearA] = a.split(' de ');
-                const [monthB, yearB] = b.split(' de ');
-
-                if (parseInt(yearA) !== parseInt(yearB)) {
-                    return parseInt(yearB) - parseInt(yearA);
-                }
-
-                return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
-            });
-
-            // Cria as abas e o conteúdo da tabela
-            sortedMonths.forEach(monthYear => {
-                const monthData = groupedData[monthYear];
-                let totalReceitaMensal = 0;
-                let totalRateioMensal = 0;
-                let totalDespesaMensal = 0;
-                
-                // Calcular inadimplentes e totais de receita
-                const delinquentCounts = {
-                    "Apartamento": TOTAL_UNITS["Apartamento"],
-                    "Kitnet": TOTAL_UNITS["Kitnet"],
-                    "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
-                };
-                
-                // Decrementa o contador para cada pagamento encontrado
-                monthData.payments.forEach(p => {
-                    delinquentCounts[p.tipoUnidade]--;
-                    totalReceitaMensal += p.valorReceita;
-                    totalRateioMensal += p.valorRateio;
-                });
-
-                // Calcula o total de despesas
-                monthData.expenses.forEach(e => {
-                    totalDespesaMensal += e.valor;
-                });
-                
-                // Ordenar os pagamentos de forma crescente por tipo e número da unidade
-                const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
-                monthData.payments.sort((a, b) => {
-                    const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
-                    const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
-                    
-                    if (typeIndexA !== typeIndexB) {
-                        return typeIndexA - typeIndexB;
-                    }
-
-                    // Extrai apenas os números para a ordenação
-                    const numA = parseInt(a.unidade.replace(/\D/g, ''));
-                    const numB = parseInt(b.unidade.replace(/\D/g, ''));
-                    return numA - numB;
-                });
-
-                // Cria o botão da aba
-                const tabButton = document.createElement('button');
-                tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
-                tabButton.textContent = monthYear;
-                tabButton.setAttribute('data-target', `tab-${monthYear.replace(/\s+/g, '-')}`);
-                tabsContainer.appendChild(tabButton);
-
-                // Cria o contêiner da tabela para esta aba
-                const tableContent = document.createElement('div');
-                tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
-                tableContent.className = "tab-content hidden";
-
-                // Adiciona o painel de resumo financeiro
-                const totalsDiv = document.createElement('div');
-                totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
-                totalsDiv.innerHTML = `
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500">Receita do Mês</p>
-                        <p class="text-xl font-bold text-blue-600">${formatCurrency(totalReceitaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p>
-                        <p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p>
-                        <p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
-                        <p class="text-xl font-bold text-green-600">${formatCurrency(totalReceitaMensal - totalDespesaMensal)}</p>
-                    </div>
-                `;
-                tableContent.appendChild(totalsDiv);
-                
-                // Adiciona o painel de inadimplentes dentro do painel do mês
-                const delinquentDiv = document.createElement('div');
-                delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
-                delinquentDiv.innerHTML = `
-                    <div class="mb-2 sm:mb-0">
-                        <p class="text-sm font-semibold text-gray-600">Inadimplentes</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p>
-                    </div>
-                `;
-                tableContent.appendChild(delinquentDiv);
-
-                // --- Tabela de Pagamentos ---
-                const paymentTableTitle = document.createElement('h3');
-                paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
-                paymentTableTitle.textContent = "Pagamentos Recebidos";
-                tableContent.appendChild(paymentTableTitle);
-
-                const paymentsTable = document.createElement('table');
-                paymentsTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mb-8";
-                paymentsTable.innerHTML = `
+            const tableHtml = `
+                <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Taxa</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rateio</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Ações</span></th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
+                        ${payments.map(item => `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.unitNumber ? `Pagamento Apto. ${item.unitNumber} - ${unitTypeDisplay[item.unitType]}` : 'N/A'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">Receita</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">${formatCurrency(item.value)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.month}/${item.year}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button onclick="deletePayment('${item.id}')" class="text-red-600 hover:text-red-900 transition-colors">Excluir</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                        ${expenses.map(item => `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.description}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">Despesa</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(item.value)}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.month}/${item.year}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button onclick="deleteExpense('${item.id}')" class="text-red-600 hover:text-red-900 transition-colors">Excluir</button>
+                                </td>
+                            </tr>
+                        `).join('')}
                     </tbody>
+                </table>
+            `;
+            document.getElementById('financialTableContainer').innerHTML = tableHtml;
+        }
+
+        // Função para atualizar os totais de resumo
+        function updateTotals(payments, expenses) {
+            const totalReceita = payments.reduce((sum, item) => sum + item.value, 0);
+            const totalRateio = payments.filter(p => p.rateio).reduce((sum, item) => sum + PRECO_RATEIO, 0);
+            const totalDespesa = expenses.reduce((sum, item) => sum + item.value, 0);
+            const totalGeral = totalReceita - totalDespesa;
+
+            document.getElementById('totalReceita').innerText = formatCurrency(totalReceita);
+            document.getElementById('totalRateio').innerText = formatCurrency(totalRateio);
+            document.getElementById('totalGeral').innerText = formatCurrency(totalGeral);
+        }
+
+        // Função para renderizar as abas dos meses
+        function renderTabs(payments, expenses) {
+            const tabsContainer = document.getElementById('tabsContainer');
+            const allDates = [...payments, ...expenses].map(item => `${item.year}-${MESES.indexOf(item.month)}`);
+            const uniqueDates = [...new Set(allDates)].sort().reverse();
+            
+            tabsContainer.innerHTML = uniqueDates.map(date => {
+                const [year, monthIndex] = date.split('-');
+                const month = MESES[parseInt(monthIndex)];
+                const isActive = `${month}-${year}` === currentActiveTab;
+                return `
+                    <button id="tab-${month}-${year}" onclick="switchTab('${month}', '${year}')" 
+                        class="tab-button px-4 py-2 mr-2 mb-2 rounded-lg font-semibold border-2 border-transparent ${isActive ? 'active' : 'text-gray-600 bg-white hover:bg-gray-200'}">
+                        ${month}/${year}
+                    </button>
                 `;
+            }).join('');
 
-                // Adiciona as linhas da tabela de pagamentos
-                const paymentTableBody = paymentsTable.querySelector('tbody');
-                if (monthData.payments.length > 0) {
-                    monthData.payments.forEach(payment => {
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition-colors";
-
-                        const receita = formatCurrency(payment.valorReceita);
-                        const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
-                        const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
-
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
-                        paymentTableBody.appendChild(row);
-                    });
-                } else {
-                    paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
-                }
-
-                tableContent.appendChild(paymentsTable);
-
-                // --- Tabela de Despesas ---
-                const expenseTableTitle = document.createElement('h3');
-                expenseTableTitle.className = "text-xl font-bold text-gray-800 my-4";
-                expenseTableTitle.textContent = "Despesas Registradas";
-                tableContent.appendChild(expenseTableTitle);
-
-                const expensesTable = document.createElement('table');
-                expensesTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
-                expensesTable.innerHTML = `
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                    </tbody>
-                `;
-
-                // Adiciona as linhas da tabela de despesas
-                const expenseTableBody = expensesTable.querySelector('tbody');
-                if (monthData.expenses.length > 0) {
-                    monthData.expenses.forEach(expense => {
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition-colors";
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(expense.valor)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
-                        expenseTableBody.appendChild(row);
-                    });
-                } else {
-                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
-                }
-                tableContent.appendChild(expensesTable);
-                tableContainer.appendChild(tableContent);
-            });
-
-            // Ativa a primeira aba (mais recente) por padrão
-            const firstTabButton = tabsContainer.querySelector('.tab-button');
-            if (firstTabButton) {
-                firstTabButton.classList.add('active');
-                const targetId = firstTabButton.getAttribute('data-target');
-                document.getElementById(targetId).classList.remove('hidden');
-                currentActiveTab = targetId;
-            }
-
-            // Adiciona o listener para a troca de abas
-            tabsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('tab-button')) {
-                    const targetId = e.target.getAttribute('data-target');
-
-                    // Esconde a aba anterior
-                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
-                        document.getElementById(currentActiveTab).classList.add('hidden');
-                    }
-
-                    // Remove a classe 'active' de todos os botões de aba
-                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-                    // Mostra a nova aba e ativa o botão
-                    document.getElementById(targetId).classList.remove('hidden');
-                    e.target.classList.add('active');
-                    currentActiveTab = targetId;
-                }
-            });
-        }
-        
-        // Função para atualizar os totais na UI
-        function updateTotals(payments) {
-            const totalReceitaElement = document.getElementById('totalReceita');
-            const totalRateioElement = document.getElementById('totalRateio');
-            const totalGeralElement = document.getElementById('totalGeral');
-
-            if (!totalReceitaElement || !totalRateioElement || !totalGeralElement) {
-                console.error("Erro: Elementos da UI de total não encontrados.");
-                return;
-            }
-
-            let totalReceita = 0;
-            let totalRateio = 0;
-
-            payments.forEach(payment => {
-                totalReceita += payment.valorReceita;
-                totalRateio += payment.valorRateio;
-            });
-
-            totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalGeralElement.innerText = (totalReceita + totalRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-
-        // Função para renderizar todos os dados no UI
-        function renderAllData() {
-            renderFinancialData(allPayments, allExpenses);
-            updateTotals(allPayments);
-            hideLoading();
-        }
-
-        // Função para registrar um novo pagamento no banco de dados
-        async function addPayment(paymentData) {
-            try {
-                showLoading();
-                const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-
-                // Verifica se já existe um pagamento para a mesma unidade, mês e ano
-                const q = query(paymentsCol,
-                    where("unidade", "==", paymentData.unidade),
-                    where("tipoUnidade", "==", paymentData.tipoUnidade),
-                    where("mes", "==", paymentData.mes),
-                    where("ano", "==", paymentData.ano)
-                );
-
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${unitTypeDisplay[paymentData.tipoUnidade]} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
-                    return;
-                }
-
-                await addDoc(paymentsCol, paymentData);
-                console.log("Documento de pagamento adicionado com sucesso.");
-                showMessage("Pagamento registrado com sucesso!");
-            } catch (error) {
-                console.error("Erro ao adicionar documento de pagamento:", error);
-                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
-            } finally {
-                hideLoading();
+            // Se não houver aba ativa, selecione a primeira
+            if (!currentActiveTab && uniqueDates.length > 0) {
+                const [year, monthIndex] = uniqueDates[0].split('-');
+                switchTab(MESES[parseInt(monthIndex)], year);
             }
         }
 
-        // Função para registrar uma nova despesa no banco de dados
-        async function addExpense(expenseData) {
-            try {
-                showLoading();
-                const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-                await addDoc(expensesCol, expenseData);
-                console.log("Documento de despesa adicionado com sucesso.");
-                showMessage("Despesa registrada com sucesso!");
-            } catch (error) {
-                console.error("Erro ao adicionar documento de despesa:", error);
-                showMessage("Erro ao registrar a despesa. Tente novamente.", true);
-            } finally {
-                hideLoading();
+        // Função para alternar entre as abas e filtrar os dados
+        function switchTab(month, year) {
+            const newActiveTab = `${month}-${year}`;
+            
+            if (currentActiveTab) {
+                const oldButton = document.getElementById(`tab-${currentActiveTab.replace('-', '-')}`);
+                if (oldButton) oldButton.classList.remove('active');
             }
+            
+            currentActiveTab = newActiveTab;
+            const newButton = document.getElementById(`tab-${month}-${year}`);
+            if (newButton) newButton.classList.add('active');
+
+            const filteredPayments = allPayments.filter(p => p.month === month && p.year === parseInt(year));
+            const filteredExpenses = allExpenses.filter(e => e.month === month && e.year === parseInt(year));
+            
+            generateFinancialTable(filteredPayments, filteredExpenses);
+            updateTotals(filteredPayments, filteredExpenses);
         }
 
-        // Função para deletar um pagamento
-        window.deletePayment = async (docId) => {
+        // Inicialização do Firebase e autenticação
+        async function initializeFirebase() {
             try {
-                showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
-                console.log("Documento de pagamento removido com sucesso.");
-                showMessage("Pagamento removido com sucesso!");
-            } catch (error) {
-                console.error("Erro ao deletar documento de pagamento:", error);
-                showMessage("Erro ao deletar o pagamento.", true);
-            } finally {
-                hideLoading();
-            }
-        };
-
-        // Função para deletar uma despesa
-        window.deleteExpense = async (docId) => {
-            try {
-                showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
-                console.log("Documento de despesa removido com sucesso.");
-                showMessage("Despesa removida com sucesso!");
-            } catch (error) {
-                console.error("Erro ao deletar documento de despesa:", error);
-                showMessage("Erro ao deletar a despesa.", true);
-            } finally {
-                hideLoading();
-            }
-        };
-        
-        // Função principal que inicializa o aplicativo
-        async function main() {
-            try {
-                setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
                 db = getFirestore(app);
+                auth = getAuth(app);
+                
+                setLogLevel('debug');
+                
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
 
-                // Preenche os campos de ano com o ano atual
-                const currentYear = new Date().getFullYear();
-                document.getElementById('paymentYear').value = currentYear;
-                document.getElementById('expenseYear').value = currentYear;
-
-                // Autentica o usuário e, após o login, inicia a escuta em tempo real
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        userId = user.uid;
                         isAuthReady = true;
-                        console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
-                        showLoading();
 
-                        // Listener para pagamentos
-                        const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                        onSnapshot(paymentsCol, (snapshot) => {
+                        // Listener para pagamentos (receita)
+                        const paymentsCollection = collection(db, 'artifacts', appId, 'users', userId, 'payments');
+                        onSnapshot(paymentsCollection, (snapshot) => {
                             allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
-                            renderAllData(); // Chamada para renderizar
-                        }, (error) => {
-                            console.error("Erro ao ouvir atualizações de pagamentos:", error);
-                            showMessage("Erro de sincronização com o banco de dados.", true);
-                            hideLoading();
+                            renderTabs(allPayments, allExpenses);
                         });
 
-                        // NOVO: Listener para despesas
-                        const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-                        onSnapshot(expensesCol, (snapshot) => {
+                        // Listener para despesas (agora em tempo real)
+                        const expensesCollection = collection(db, 'artifacts', appId, 'users', userId, 'expenses');
+                        onSnapshot(expensesCollection, (snapshot) => {
                             allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
-                            renderAllData(); // Chamada para renderizar
-                        }, (error) => {
-                            console.error("Erro ao ouvir atualizações de despesas:", error);
-                            showMessage("Erro de sincronização com o banco de dados.", true);
-                            hideLoading();
+                            renderTabs(allPayments, allExpenses);
                         });
 
                     } else {
-                        console.log("Usuário não autenticado. Iniciando o processo de login.");
-                        if (initialAuthToken) {
-                            try {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (e) {
-                                console.error("Erro ao autenticar com token:", e);
-                                showMessage("Erro de autenticação. Verifique as configurações.", true);
-                            }
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        isAuthReady = true;
+                        console.log("Usuário não autenticado. Operando em modo anônimo.");
                     }
                 });
-
-                const paymentForm = document.getElementById('paymentForm');
-                if (paymentForm) {
-                    paymentForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        const unitNumber = document.getElementById('unitNumber').value;
-                        const unitType = document.getElementById('unitType').value;
-                        const paymentType = document.getElementById('paymentType').value;
-                        const paymentMonth = document.getElementById('paymentMonth').value;
-                        const paymentYear = parseInt(document.getElementById('paymentYear').value);
-                        const rateioPaid = document.getElementById('rateioPaid').checked;
-
-                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-
-                        const newPayment = {
-                            unidade: unitNumber,
-                            tipoUnidade: unitType,
-                            tipoPagamento: paymentType,
-                            mes: paymentMonth,
-                            ano: paymentYear,
-                            valorReceita: valorReceita,
-                            valorRateio: valorRateio,
-                            dataRegistro: new Date()
-                        };
-
-                        await addPayment(newPayment);
-
-                        paymentForm.reset();
-                        document.getElementById('paymentYear').value = new Date().getFullYear();
-                    });
-                } else {
-                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
-                }
-
-                const expenseForm = document.getElementById('expenseForm');
-                if (expenseForm) {
-                    expenseForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-
-                        const description = document.getElementById('expenseDescription').value;
-                        const value = parseFloat(document.getElementById('expenseValue').value);
-                        const month = document.getElementById('expenseMonth').value;
-                        const year = parseInt(document.getElementById('expenseYear').value);
-
-                        const newExpense = {
-                            descricao: description,
-                            valor: value,
-                            mes: month,
-                            ano: year,
-                            dataRegistro: new Date()
-                        };
-
-                        await addExpense(newExpense);
-
-                        expenseForm.reset();
-                        document.getElementById('expenseYear').value = new Date().getFullYear();
-                    });
-                } else {
-                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
-                }
-
             } catch (error) {
-                console.error("Erro na inicialização do Firebase:", error);
-                showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
+                console.error("Erro ao inicializar Firebase:", error);
+                showMessage("Erro ao conectar com o banco de dados.", true);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', main);
+        // Funções para adicionar e excluir dados
+        async function addPayment(e) {
+            e.preventDefault();
+            if (!isAuthReady) {
+                showMessage("Aguardando autenticação...", true);
+                return;
+            }
+
+            const paymentForm = document.getElementById('paymentForm');
+            const unitNumber = paymentForm.unitNumber.value;
+            const unitType = paymentForm.unitType.value;
+            const paymentType = paymentForm.paymentType.value;
+            const month = paymentForm.paymentMonth.value;
+            const year = parseInt(paymentForm.paymentYear.value);
+            const rateio = paymentForm.rateioPaid.checked;
+            
+            const value = PRECOS[unitType][paymentType === 'Normal' ? 'normal' : 'a_vista'];
+
+            showLoading();
+
+            try {
+                const paymentsCollection = collection(db, 'artifacts', appId, 'users', userId, 'payments');
+                await addDoc(paymentsCollection, {
+                    unitNumber: unitNumber,
+                    unitType: unitType,
+                    paymentType: paymentType,
+                    month: month,
+                    year: year,
+                    rateio: rateio,
+                    value: value,
+                    createdAt: new Date()
+                });
+                showMessage("Pagamento registrado com sucesso!");
+                paymentForm.reset();
+            } catch (error) {
+                console.error("Erro ao registrar pagamento:", error);
+                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
+            }
+        }
+
+        async function addExpense(e) {
+            e.preventDefault();
+            if (!isAuthReady) {
+                showMessage("Aguardando autenticação...", true);
+                return;
+            }
+
+            const expenseForm = document.getElementById('expenseForm');
+            const description = expenseForm.expenseDescription.value;
+            const value = parseFloat(expenseForm.expenseValue.value);
+            const month = expenseForm.expenseMonth.value;
+            const year = parseInt(expenseForm.expenseYear.value);
+
+            showLoading();
+
+            try {
+                const expensesCollection = collection(db, 'artifacts', appId, 'users', userId, 'expenses');
+                await addDoc(expensesCollection, {
+                    description: description,
+                    value: value,
+                    month: month,
+                    year: year,
+                    createdAt: new Date()
+                });
+                showMessage("Despesa registrada com sucesso!");
+                expenseForm.reset();
+            } catch (error) {
+                console.error("Erro ao registrar despesa:", error);
+                showMessage("Erro ao registrar a despesa. Tente novamente.", true);
+            }
+        }
+
+        async function deletePayment(id) {
+            if (!isAuthReady) {
+                showMessage("Aguardando autenticação...", true);
+                return;
+            }
+            // Não usamos o window.confirm, mas sim uma modal customizada
+            showMessage("Tem certeza que deseja excluir este pagamento?<br><button onclick='confirmDelete(\"payment\", \"" + id + "\")' class='mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600'>Sim, Excluir</button>");
+        }
+
+        async function deleteExpense(id) {
+            if (!isAuthReady) {
+                showMessage("Aguardando autenticação...", true);
+                return;
+            }
+            // Não usamos o window.confirm, mas sim uma modal customizada
+            showMessage("Tem certeza que deseja excluir esta despesa?<br><button onclick='confirmDelete(\"expense\", \"" + id + "\")' class='mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600'>Sim, Excluir</button>");
+        }
+        
+        // Função de confirmação para a modal
+        window.confirmDelete = async function(type, id) {
+            document.getElementById('messageModal').classList.add('hidden');
+            showLoading();
+            try {
+                if (type === "payment") {
+                    const paymentDoc = doc(db, 'artifacts', appId, 'users', userId, 'payments', id);
+                    await deleteDoc(paymentDoc);
+                    showMessage("Pagamento excluído com sucesso!");
+                } else if (type === "expense") {
+                    const expenseDoc = doc(db, 'artifacts', appId, 'users', userId, 'expenses', id);
+                    await deleteDoc(expenseDoc);
+                    showMessage("Despesa excluída com sucesso!");
+                }
+            } catch (error) {
+                console.error("Erro ao excluir item:", error);
+                showMessage("Erro ao excluir o item. Tente novamente.", true);
+            }
+        };
+       
+        // Event listeners para os formulários
+        document.getElementById('paymentForm').addEventListener('submit', addPayment);
+        document.getElementById('expenseForm').addEventListener('submit', addExpense);
+
+        // Inicia a aplicação
+        initializeFirebase();
     </script>
 </body>
 </html>
