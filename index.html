@@ -40,12 +40,11 @@
         .tab-button.active:hover {
             background-color: #3182ce; /* a slightly darker blue */
         }
-        
     </style>
 </head>
 <body class="bg-gray-100 p-4 sm:p-8">
 
-    <!-- Mensagem de carregamento e erro -->
+    <!-- Mensagem de carregamento e erro/sucesso -->
     <div id="loadingMessage" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-2xl">
             <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
@@ -53,13 +52,11 @@
         </div>
     </div>
 
-    <div id="errorMessage" class="fixed inset-0 bg-red-100 bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="flex flex-col items-center p-6 bg-red-50 rounded-xl shadow-2xl border border-red-300">
-            <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <p class="mt-4 text-lg font-medium text-red-700 text-center" id="errorMessageText"></p>
-            <button onclick="document.getElementById('errorMessage').classList.add('hidden')" class="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors">Fechar</button>
+    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div id="messageModalContent" class="flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center">
+            <svg id="messageIcon" class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"></svg>
+            <p id="messageText" class="mt-2 text-lg font-medium"></p>
+            <button onclick="document.getElementById('messageModal').classList.add('hidden')" class="mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors">Fechar</button>
         </div>
     </div>
 
@@ -87,7 +84,7 @@
                 <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
             </div>
         </div>
-        
+
         <!-- Formulário para Registrar Pagamentos -->
         <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Pagamento</h2>
@@ -147,7 +144,7 @@
                     <input type="checkbox" id="rateioPaid" class="h-5 w-5 text-purple-600 rounded-lg border-gray-300 focus:ring-purple-500">
                     <label for="rateioPaid" class="ml-2 text-gray-700 font-semibold">Pagamento de Rateio</label>
                 </div>
-                
+
                 <div class="lg:col-span-5">
                     <button type="submit" class="w-full px-6 py-3 mt-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg transform hover:scale-105">
                         Registrar Pagamento
@@ -161,17 +158,17 @@
             <div class="p-6 bg-gray-50 border-b-2 border-gray-200">
                 <h2 class="text-2xl font-bold text-gray-800">Pagamentos Registrados</h2>
             </div>
-            
+
             <p id="noPaymentsMessage" class="text-center text-gray-500 p-6 hidden">Nenhum pagamento registrado ainda.</p>
-            
+
             <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
                 <!-- Abas dos meses serão inseridas aqui pelo JS -->
             </div>
-            
+
             <div id="paymentsTableContainer" class="p-4 overflow-x-auto">
                 <!-- Tabelas de pagamentos serão inseridas aqui pelo JS -->
             </div>
-            
+
         </div>
     </div>
 
@@ -195,7 +192,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Dados de precificação
+        // Dados de precificação e contagem total de unidades
         const PRECOS = {
             "Apartamento": { normal: 629.00, a_vista: 629.00 - 28.88 },
             "Kitnet": { normal: 524.51, a_vista: 524.51 - 25.89 },
@@ -204,26 +201,43 @@
         const PRECO_RATEIO = 137.70;
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+        const TOTAL_UNITS = {
+            "Apartamento": 38,
+            "Kitnet": 10,
+            "Sala Comercial": 16
+        };
+
         let db;
         let isAuthReady = false;
         let currentActiveTab = '';
 
-        // Exibe uma mensagem de erro na tela
-        function showError(message) {
-            const loadingMessage = document.getElementById('loadingMessage');
-            if (loadingMessage) {
-                loadingMessage.classList.add('hidden');
+        // Exibe uma mensagem de feedback na tela (sucesso ou erro)
+        function showMessage(message, isError = false) {
+            hideLoading();
+            const modal = document.getElementById('messageModal');
+            const content = document.getElementById('messageModalContent');
+            const icon = document.getElementById('messageIcon');
+            const text = document.getElementById('messageText');
+            const button = modal.querySelector('button');
+
+            text.innerText = message;
+
+            if (isError) {
+                content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-red-50 border border-red-300';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.add('text-red-500');
+                text.classList.add('text-red-700');
+                button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600';
+            } else {
+                content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-green-50 border border-green-300';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+                icon.classList.add('text-green-500');
+                text.classList.add('text-green-700');
+                button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-green-500 hover:bg-green-600';
             }
-            const errorElement = document.getElementById('errorMessage');
-            if (errorElement) {
-                const errorMessageText = document.getElementById('errorMessageText');
-                if (errorMessageText) {
-                    errorMessageText.innerText = message;
-                }
-                errorElement.classList.remove('hidden');
-            }
+            modal.classList.remove('hidden');
         }
-        
+
         // Função para mostrar a mensagem de carregamento
         function showLoading() {
             const loadingMessage = document.getElementById('loadingMessage');
@@ -231,7 +245,7 @@
                 loadingMessage.classList.remove('hidden');
             }
         }
-        
+
         // Função para esconder a mensagem de carregamento
         function hideLoading() {
             const loadingMessage = document.getElementById('loadingMessage');
@@ -244,16 +258,16 @@
         function formatCurrency(value) {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
-        
+
         // Função que renderiza os pagamentos na UI
         function renderPayments(payments) {
             const noPaymentsMessage = document.getElementById('noPaymentsMessage');
             const tabsContainer = document.getElementById('tabsContainer');
             const tableContainer = document.getElementById('paymentsTableContainer');
-            
+
             if (!noPaymentsMessage || !tabsContainer || !tableContainer) {
                 console.error("Erro fatal: Elementos da UI não encontrados.");
-                showError("Erro de carregamento. Por favor, recarregue a página.");
+                showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
                 return;
             }
 
@@ -281,11 +295,11 @@
             const sortedMonths = Object.keys(groupedPayments).sort((a, b) => {
                 const [monthA, yearA] = a.split(' de ');
                 const [monthB, yearB] = b.split(' de ');
-                
+
                 if (parseInt(yearA) !== parseInt(yearB)) {
                     return parseInt(yearB) - parseInt(yearA);
                 }
-                
+
                 return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
             });
 
@@ -294,10 +308,51 @@
                 const monthPayments = groupedPayments[monthYear];
                 let totalReceitaMensal = 0;
                 let totalRateioMensal = 0;
+                
+                // Conjunto de unidades que já pagaram neste mês
+                const paidUnits = new Set(monthPayments.map(p => `${p.tipoUnidade} ${p.unidade}`));
+                
+                // Calcular inadimplentes para este mês
+                const delinquentCounts = {
+                    "Apartamento": 0,
+                    "Kitnet": 0,
+                    "Sala Comercial": 0
+                };
+                
+                for (let i = 1; i <= TOTAL_UNITS["Apartamento"]; i++) {
+                    if (!paidUnits.has(`Apartamento Apto ${i}`)) {
+                        delinquentCounts["Apartamento"]++;
+                    }
+                }
+                for (let i = 1; i <= TOTAL_UNITS["Kitnet"]; i++) {
+                    if (!paidUnits.has(`Kitnet Kitnet ${i}`)) {
+                        delinquentCounts["Kitnet"]++;
+                    }
+                }
+                for (let i = 1; i <= TOTAL_UNITS["Sala Comercial"]; i++) {
+                    if (!paidUnits.has(`Sala Comercial Sala ${i}`)) {
+                        delinquentCounts["Sala Comercial"]++;
+                    }
+                }
 
                 monthPayments.forEach(p => {
                     totalReceitaMensal += p.valorReceita;
                     totalRateioMensal += p.valorRateio;
+                });
+                
+                // Ordenar os pagamentos de forma crescente por tipo e número da unidade
+                const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
+                monthPayments.sort((a, b) => {
+                    const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
+                    const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
+                    
+                    if (typeIndexA !== typeIndexB) {
+                        return typeIndexA - typeIndexB;
+                    }
+
+                    const numA = parseInt(a.unidade.replace(/\D/g, ''));
+                    const numB = parseInt(b.unidade.replace(/\D/g, ''));
+                    return numA - numB;
                 });
 
                 // Cria o botão da aba
@@ -326,10 +381,29 @@
                 `;
                 tableContent.appendChild(totalsDiv);
                 
+                // Adiciona o painel de inadimplentes dentro do painel do mês
+                const delinquentDiv = document.createElement('div');
+                delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
+                delinquentDiv.innerHTML = `
+                    <div class="mb-2 sm:mb-0">
+                        <p class="text-sm font-semibold text-gray-600">Inadimplentes</p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p>
+                    </div>
+                `;
+                tableContent.appendChild(delinquentDiv);
+
                 // Cria a tabela
                 const table = document.createElement('table');
                 table.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
-                
+
                 table.innerHTML = `
                     <thead class="bg-gray-50">
                         <tr>
@@ -350,7 +424,7 @@
                 monthPayments.forEach(payment => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50 transition-colors";
-                    
+
                     const receita = formatCurrency(payment.valorReceita);
                     const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
 
@@ -374,7 +448,7 @@
                 tableContent.appendChild(table);
                 tableContainer.appendChild(tableContent);
             });
-            
+
             // Ativa a primeira aba (mais recente) por padrão
             const firstTabButton = tabsContainer.querySelector('.tab-button');
             if (firstTabButton) {
@@ -393,7 +467,7 @@
                     if (currentActiveTab && document.getElementById(currentActiveTab)) {
                         document.getElementById(currentActiveTab).classList.add('hidden');
                     }
-                    
+
                     // Remove a classe 'active' de todos os botões de aba
                     tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
 
@@ -436,24 +510,26 @@
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
 
                 // Verifica se já existe um pagamento para a mesma unidade, mês e ano
-                const q = query(paymentsCol, 
+                const q = query(paymentsCol,
                     where("unidade", "==", paymentData.unidade),
+                    where("tipoUnidade", "==", paymentData.tipoUnidade),
                     where("mes", "==", paymentData.mes),
                     where("ano", "==", paymentData.ano)
                 );
-                
+
                 const querySnapshot = await getDocs(q);
 
                 if (!querySnapshot.empty) {
-                    showError(`Pagamento para a unidade ${paymentData.unidade} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`);
+                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${paymentData.tipoUnidade} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
                     return;
                 }
 
                 await addDoc(paymentsCol, paymentData);
                 console.log("Documento adicionado com sucesso.");
+                showMessage("Pagamento registrado com sucesso!");
             } catch (error) {
                 console.error("Erro ao adicionar documento:", error);
-                showError("Erro ao registrar o pagamento. Tente novamente.");
+                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
             } finally {
                 hideLoading();
             }
@@ -465,14 +541,15 @@
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
                 console.log("Documento removido com sucesso.");
+                showMessage("Pagamento removido com sucesso!");
             } catch (error) {
                 console.error("Erro ao deletar documento:", error);
-                showError("Erro ao deletar o pagamento.");
+                showMessage("Erro ao deletar o pagamento.", true);
             } finally {
                 hideLoading();
             }
         };
-
+        
         // Função principal que inicializa o aplicativo
         async function main() {
             try {
@@ -483,8 +560,9 @@
 
                 // Preenche o campo de ano com o ano atual
                 const paymentYearInput = document.getElementById('paymentYear');
+                const currentYear = new Date().getFullYear();
                 if (paymentYearInput) {
-                    paymentYearInput.value = new Date().getFullYear();
+                    paymentYearInput.value = currentYear;
                 }
 
                 // Autentica o usuário e, após o login, inicia a escuta em tempo real
@@ -493,7 +571,7 @@
                         isAuthReady = true;
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
-                        
+
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                         const unsubscribe = onSnapshot(paymentsCol, (snapshot) => {
                             const payments = [];
@@ -506,7 +584,7 @@
                             hideLoading();
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações:", error);
-                            showError("Erro de sincronização com o banco de dados.");
+                            showMessage("Erro de sincronização com o banco de dados.", true);
                             hideLoading();
                         });
 
@@ -517,14 +595,14 @@
                                 await signInWithCustomToken(auth, initialAuthToken);
                             } catch (e) {
                                 console.error("Erro ao autenticar com token:", e);
-                                showError("Erro de autenticação. Verifique as configurações.");
+                                showMessage("Erro de autenticação. Verifique as configurações.", true);
                             }
                         } else {
                             await signInAnonymously(auth);
                         }
                     }
                 });
-                
+
                 const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
@@ -562,7 +640,7 @@
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
-                showError("Erro ao conectar com o banco de dados. Tente novamente mais tarde.");
+                showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
             }
         }
 
