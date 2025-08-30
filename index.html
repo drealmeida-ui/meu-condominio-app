@@ -166,7 +166,8 @@
                 <!-- Campo de Valor da Despesa -->
                 <div>
                     <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
-                    <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                    <input type="text" id="expenseValue" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                    <input type="hidden" id="hiddenExpenseValue" name="hiddenExpenseValue">
                 </div>
                 
                 <!-- Campo de Mês da Despesa -->
@@ -223,20 +224,13 @@
     <!-- Firebase SDKs -->
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
-        const firebaseConfig = {
-          apiKey: "AIzaSyD_ruv-FFVXHmkYudaI0Mq-N-xU2y4EBDM",
-          authDomain: "controlepiramide.firebaseapp.com",
-          projectId: "controlepiramide",
-          storageBucket: "controlepiramide.firebasestorage.app",
-          messagingSenderId: "753496447014",
-          appId: "1:753496447014:web:aa9cde68924dc445466ee7"
-        };
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -313,6 +307,27 @@
         // Função para formatar um número para moeda BRL
         function formatCurrency(value) {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Função para limpar e formatar o valor do input de despesa
+        const expenseValueInput = document.getElementById('expenseValue');
+        const hiddenExpenseValueInput = document.getElementById('hiddenExpenseValue');
+
+        function cleanAndFormatValue(event) {
+            let value = event.target.value;
+            // Remove tudo que não for dígito
+            value = value.replace(/\D/g, '');
+            // Converte para um número e divide por 100 para o formato de centavos
+            const num = parseInt(value, 10) / 100;
+            // Atualiza o valor do input oculto
+            hiddenExpenseValueInput.value = num;
+            // Formata e exibe o valor no input visível
+            event.target.value = formatCurrency(num);
+        }
+        
+        if (expenseValueInput) {
+            expenseValueInput.addEventListener('keyup', cleanAndFormatValue);
+            expenseValueInput.addEventListener('blur', cleanAndFormatValue);
         }
 
         // Função para renderizar os dados financeiros (pagamentos e despesas)
@@ -801,9 +816,14 @@
                         e.preventDefault();
 
                         const description = document.getElementById('expenseDescription').value;
-                        const value = parseFloat(document.getElementById('expenseValue').value);
+                        const value = parseFloat(document.getElementById('hiddenExpenseValue').value);
                         const month = document.getElementById('expenseMonth').value;
                         const year = parseInt(document.getElementById('expenseYear').value);
+
+                        if (isNaN(value) || value <= 0) {
+                            showMessage("Por favor, insira um valor válido para a despesa.", true);
+                            return;
+                        }
 
                         const newExpense = {
                             descricao: description,
