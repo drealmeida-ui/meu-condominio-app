@@ -110,6 +110,45 @@
                 background-color: white;
                 box-shadow: none;
             }
+
+            .report-container p, .report-container h2 {
+                font-size: 0.9em;
+            }
+
+            .report-container h2 {
+                font-weight: bold;
+            }
+
+            .report-container .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 0.5rem;
+            }
+            
+            .report-container .p-4 {
+                padding: 0.25rem !important;
+            }
+
+            .report-container .text-sm {
+                font-size: 0.75rem !important;
+            }
+            
+            .report-container .text-lg {
+                font-size: 1rem !important;
+            }
+
+            .report-container table {
+                font-size: 0.75rem;
+                table-layout: fixed;
+                width: 100%;
+            }
+
+            .report-container th, .report-container td {
+                padding: 0.25rem 0.5rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
         }
     </style>
 </head>
@@ -879,6 +918,9 @@
             
             // Renderiza o conteúdo do relatório
             reportContent.innerHTML = `
+                <!-- NOVO: Texto de introdução do relatório -->
+                <p class="text-sm text-gray-600 mb-4">Este relatório apresenta um resumo financeiro do condomínio no período de <strong>${startMonth}/${startYear}</strong> a <strong>${endMonth}/${endYear}</strong>. Os dados abaixo detalham as receitas, despesas e o balanço geral do período.</p>
+                
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 text-center">
                     <div class="bg-blue-50 rounded-xl p-4 border border-blue-200">
                         <p class="text-gray-500 font-semibold text-sm">Receita Total</p>
