@@ -1,464 +1,398 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Receita e Despesa</title>
+    <title>Gestão Financeira do Condomínio</title>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
+            transition: background-color 0.3s ease;
         }
-        .container-card {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 2rem;
-            background-color: white;
-            border-radius: 1rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .text-shadow-custom {
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        .tab-button {
-            transition-property: background-color, border-color, color;
-            transition-duration: 300ms;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        }
+
         .tab-button.active {
-            background-color: #4299e1;
-            color: white;
-            border-color: #4299e1;
+            border-bottom: 2px solid #3b82f6;
+            color: #1d4ed8;
+            font-weight: 600;
         }
-        .tab-button:not(.active):hover {
-            background-color: #e0f2fe; /* light blue */
+
+        .tab-content.hidden {
+            display: none;
         }
-        .tab-button.active:hover {
-            background-color: #3182ce; /* a slightly darker blue */
+
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+
+        .form-container.hidden {
+            display: none;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal-content {
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        .modal-content.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 </head>
-<body class="bg-gray-100 p-4 sm:p-8">
+<body class="p-4 sm:p-8">
 
-    <!-- Mensagem de carregamento e erro/sucesso -->
-    <div id="loadingMessage" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
-        <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-2xl">
-            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-            <p class="mt-4 text-lg font-medium text-gray-700">Carregando...</p>
-        </div>
+    <div id="loadingOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden fade-in">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
     </div>
+    
+    <div id="messageContainer"></div>
 
-    <div id="messageModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div id="messageModalContent" class="flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center">
-            <svg id="messageIcon" class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"></svg>
-            <p id="messageText" class="mt-2 text-lg font-medium"></p>
-            <button onclick="document.getElementById('messageModal').classList.add('hidden')" class="mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors">Fechar</button>
-        </div>
-    </div>
+    <div class="max-w-6xl mx-auto bg-white p-6 sm:p-10 rounded-2xl shadow-xl space-y-8">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2">Gestão Financeira</h1>
+            <p class="text-gray-500 text-sm sm:text-base">Controle de pagamentos e despesas do condomínio em tempo real.</p>
+        </header>
 
-    <!-- Container Principal -->
-    <div class="container-card">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
-            Controle de Receita e Despesa
-        </h1>
-        <p class="text-lg text-gray-600 text-center mb-8">
-            Condomínio Pirâmide
-        </p>
-
-        <!-- Seção de Resumo Total -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
-                <p class="text-gray-500 font-semibold text-lg">Receita Total</p>
-                <p id="totalReceita" class="text-blue-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+        <!-- Seção de Totais -->
+        <div id="totalsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            <div class="bg-blue-100 p-6 rounded-xl shadow-md">
+                <p class="text-sm font-medium text-blue-800">Receita Total</p>
+                <p id="totalReceita" class="text-2xl sm:text-3xl font-bold text-blue-700 mt-2">R$ 0,00</p>
             </div>
-            <div class="bg-purple-50 rounded-xl p-6 text-center border-2 border-purple-200">
-                <p class="text-gray-500 font-semibold text-lg">Total Rateio</p>
-                <p id="totalRateio" class="text-purple-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+            <div class="bg-purple-100 p-6 rounded-xl shadow-md">
+                <p class="text-sm font-medium text-purple-800">Rateio Total</p>
+                <p id="totalRateio" class="text-2xl sm:text-3xl font-bold text-purple-700 mt-2">R$ 0,00</p>
             </div>
-            <div class="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
-                <p class="text-gray-500 font-semibold text-lg">Total Geral</p>
-                <p id="totalGeral" class="text-green-600 font-extrabold text-3xl mt-1">R$ 0,00</p>
+            <div class="bg-green-100 p-6 rounded-xl shadow-md">
+                <p class="text-sm font-medium text-green-800">Valor Geral</p>
+                <p id="totalGeral" class="text-2xl sm:text-3xl font-bold text-green-700 mt-2">R$ 0,00</p>
             </div>
         </div>
 
-        <!-- Formulário para Registrar Pagamentos -->
-        <div class="bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Pagamento</h2>
-            <form id="paymentForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                <!-- Campo de Número da Unidade -->
-                <div>
-                    <label for="unitNumber" class="block text-gray-700 font-semibold mb-1">Unidade</label>
-                    <input type="text" id="unitNumber" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                </div>
+        <!-- Botões de Troca de Formulário -->
+        <div class="flex justify-center my-8">
+            <button id="showPaymentFormBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 mr-4">
+                Registrar Pagamento
+            </button>
+            <button id="showExpenseFormBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105">
+                Registrar Despesa
+            </button>
+        </div>
 
-                <!-- Campo de Tipo de Unidade -->
-                <div>
-                    <label for="unitType" class="block text-gray-700 font-semibold mb-1">Tipo</label>
-                    <select id="unitType" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                        <option value="Apartamento">Apto.</option>
-                        <option value="Kitnet">Kitnet</option>
-                        <option value="Sala Comercial">Sala</option>
-                    </select>
+        <!-- Formulários -->
+        <div id="formsContainer" class="space-y-6">
+            <!-- Formulário de Pagamento -->
+            <form id="paymentForm" class="bg-gray-50 p-6 sm:p-8 rounded-xl shadow-inner border border-gray-200">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Novo Pagamento</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label for="unitNumber" class="block text-sm font-medium text-gray-700 mb-1">Unidade:</label>
+                        <input type="text" id="unitNumber" name="unitNumber" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="unitType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Unidade:</label>
+                        <select id="unitType" name="unitType" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="apartamento">Apartamento</option>
+                            <option value="casa">Casa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="paymentType" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Pagamento:</label>
+                        <select id="paymentType" name="paymentType" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="Normal">Normal</option>
+                            <option value="A_Vista">À Vista (com desconto)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="paymentMonth" class="block text-sm font-medium text-gray-700 mb-1">Mês:</label>
+                        <select id="paymentMonth" name="paymentMonth" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="Janeiro">Janeiro</option>
+                            <option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option>
+                            <option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option>
+                            <option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option>
+                            <option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option>
+                            <option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option>
+                            <option value="Dezembro">Dezembro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="paymentYear" class="block text-sm font-medium text-gray-700 mb-1">Ano:</label>
+                        <input type="number" id="paymentYear" name="paymentYear" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center mt-6">
+                        <input type="checkbox" id="rateioPaid" name="rateioPaid" class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                        <label for="rateioPaid" class="ml-2 block text-sm font-medium text-gray-700">Pagou Rateio</label>
+                    </div>
                 </div>
-
-                <!-- Campo de Tipo de Pagamento -->
-                <div>
-                    <label for="paymentType" class="block text-gray-700 font-semibold mb-1">Pagamento</label>
-                    <select id="paymentType" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                        <option value="Normal">Normal</option>
-                        <option value="A_Vista">Com desconto</option>
-                    </select>
-                </div>
-
-                <!-- Campo de Mês do Pagamento -->
-                <div>
-                    <label for="paymentMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
-                    <select id="paymentMonth" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                        <option value="Janeiro">Janeiro</option>
-                        <option value="Fevereiro">Fevereiro</option>
-                        <option value="Março">Março</option>
-                        <option value="Abril">Abril</option>
-                        <option value="Maio">Maio</option>
-                        <option value="Junho">Junho</option>
-                        <option value="Julho">Julho</option>
-                        <option value="Agosto">Agosto</option>
-                        <option value="Setembro">Setembro</option>
-                        <option value="Outubro">Outubro</option>
-                        <option value="Novembro">Novembro</option>
-                        <option value="Dezembro">Dezembro</option>
-                    </select>
-                </div>
-
-                <!-- Campo de Ano do Pagamento -->
-                <div>
-                    <label for="paymentYear" class="block text-gray-700 font-semibold mb-1">Ano</label>
-                    <input type="number" id="paymentYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                </div>
-
-                <!-- Checkbox de Rateio -->
-                <div class="flex items-center col-span-2">
-                    <input type="checkbox" id="rateioPaid" class="h-5 w-5 text-purple-600 rounded-lg border-gray-300 focus:ring-purple-500">
-                    <label for="rateioPaid" class="ml-2 text-gray-700 font-semibold">Pagamento de Rateio</label>
-                </div>
-
-                <div class="lg:col-span-5">
-                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg transform hover:scale-105">
+                <div class="mt-8 text-center">
+                    <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                         Registrar Pagamento
                     </button>
                 </div>
             </form>
-        </div>
 
-        <!-- Formulário para Registrar Despesas -->
-        <div class="bg-red-50 p-6 rounded-xl border-2 border-red-200 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Despesa</h2>
-            <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                <!-- Campo de Descrição da Despesa -->
-                <div>
-                    <label for="expenseDescription" class="block text-gray-700 font-semibold mb-1">Descrição</label>
-                    <input type="text" id="expenseDescription" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+            <!-- Formulário de Despesa -->
+            <form id="expenseForm" class="bg-gray-50 p-6 sm:p-8 rounded-xl shadow-inner border border-gray-200 hidden form-container">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Nova Despesa</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label for="expenseDescription" class="block text-sm font-medium text-gray-700 mb-1">Descrição:</label>
+                        <input type="text" id="expenseDescription" name="expenseDescription" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="expenseValue" class="block text-sm font-medium text-gray-700 mb-1">Valor (R$):</label>
+                        <input type="number" step="0.01" id="expenseValue" name="expenseValue" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="expenseMonth" class="block text-sm font-medium text-gray-700 mb-1">Mês:</label>
+                        <select id="expenseMonth" name="expenseMonth" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="Janeiro">Janeiro</option>
+                            <option value="Fevereiro">Fevereiro</option>
+                            <option value="Março">Março</option>
+                            <option value="Abril">Abril</option>
+                            <option value="Maio">Maio</option>
+                            <option value="Junho">Junho</option>
+                            <option value="Julho">Julho</option>
+                            <option value="Agosto">Agosto</option>
+                            <option value="Setembro">Setembro</option>
+                            <option value="Outubro">Outubro</option>
+                            <option value="Novembro">Novembro</option>
+                            <option value="Dezembro">Dezembro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="expenseYear" class="block text-sm font-medium text-gray-700 mb-1">Ano:</label>
+                        <input type="number" id="expenseYear" name="expenseYear" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
                 </div>
-
-                <!-- Campo de Valor da Despesa -->
-                <div>
-                    <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
-                    <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                </div>
-                
-                <!-- Campo de Mês da Despesa -->
-                <div>
-                    <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
-                    <select id="expenseMonth" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                        <option value="Janeiro">Janeiro</option>
-                        <option value="Fevereiro">Fevereiro</option>
-                        <option value="Março">Março</option>
-                        <option value="Abril">Abril</option>
-                        <option value="Maio">Maio</option>
-                        <option value="Junho">Junho</option>
-                        <option value="Julho">Julho</option>
-                        <option value="Agosto">Agosto</option>
-                        <option value="Setembro">Setembro</option>
-                        <option value="Outubro">Outubro</option>
-                        <option value="Novembro">Novembro</option>
-                        <option value="Dezembro">Dezembro</option>
-                    </select>
-                </div>
-
-                <!-- Campo de Ano da Despesa -->
-                <div>
-                    <label for="expenseYear" class="block text-gray-700 font-semibold mb-1">Ano</label>
-                    <input type="number" id="expenseYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
-                </div>
-
-                <div class="lg:col-span-4">
-                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors shadow-lg transform hover:scale-105">
+                <div class="mt-8 text-center">
+                    <button type="submit" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-10 rounded-full shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
                         Registrar Despesa
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Seção de Pagamentos Registrados com Abas e Tabela -->
-        <div class="mt-8 bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="p-6 bg-gray-50 border-b-2 border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800">Balanço Mensal</h2>
-            </div>
+        <hr class="my-8 border-gray-200">
 
-            <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum dado registrado ainda.</p>
-
-            <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
-                <!-- Abas dos meses serão inseridas aqui pelo JS -->
-            </div>
-
-            <div id="financialTableContainer" class="p-4 overflow-x-auto">
-                <!-- Conteúdo financeiro será inserido aqui pelo JS -->
+        <!-- Abas e Conteúdo de Dados Mensais -->
+        <div id="dataSection">
+            <nav id="tabsContainer" class="flex flex-wrap justify-center sm:justify-start -mb-px space-x-2 sm:space-x-4 border-b border-gray-200" role="tablist">
+                <!-- Abas serão geradas aqui dinamicamente -->
+            </nav>
+            <div id="tableContainer" class="mt-8">
+                <!-- Tabelas serão geradas aqui dinamicamente -->
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Modals -->
+    <div id="modalOverlay" class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 hidden transition-opacity">
+        <div id="modalContent" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-xl shadow-2xl max-w-lg w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-800"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="modalBody" class="text-gray-600 mb-4"></div>
+            <div id="modalActions" class="text-right"></div>
+        </div>
+    </div>
+
     <script type="module">
-        // Importa as dependências do Firebase na versão mais estável
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Variáveis de ambiente fornecidas pelo Canvas
-        const firebaseConfig = {
-          apiKey: "AIzaSyD_ruv-FFVXHmkYudaI0Mq-N-xU2y4EBDM",
-          authDomain: "controlepiramide.firebaseapp.com",
-          projectId: "controlepiramide",
-          storageBucket: "controlepiramide.firebasestorage.app",
-          messagingSenderId: "753496447014",
-          appId: "1:753496447014:web:aa9cde68924dc445466ee7"
-        };
+        // Variáveis globais fornecidas pelo ambiente
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Dados de precificação e contagem total de unidades
-        const PRECOS = {
-            "Apartamento": { normal: 629.00, a_vista: 629.00 - 28.88 },
-            "Kitnet": { normal: 524.51, a_vista: 524.51 - 25.89 },
-            "Sala Comercial": { normal: 268.31, a_vista: 268.31 - 17.66 }
-        };
-        const PRECO_RATEIO = 137.70;
-        const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-        const TOTAL_UNITS = {
-            "Apartamento": 38,
-            "Kitnet": 10,
-            "Sala Comercial": 16
-        };
         
-        const unitTypeDisplay = {
-          "Apartamento": "Apto.",
-          "Kitnet": "Kitnet",
-          "Sala Comercial": "Sala"
-        };
-
+        // Instâncias do Firebase
         let db;
+        let auth;
         let isAuthReady = false;
-        let currentActiveTab = '';
+
+        // Dados
         let allPayments = [];
         let allExpenses = [];
+        let currentActiveTab = null;
 
-        // Exibe uma mensagem de feedback na tela (sucesso ou erro)
-        function showMessage(message, isError = false) {
-            hideLoading();
-            const modal = document.getElementById('messageModal');
-            const content = document.getElementById('messageModalContent');
-            const icon = document.getElementById('messageIcon');
-            const text = document.getElementById('messageText');
-            const button = modal.querySelector('button');
+        // Constantes
+        const PRECOS = {
+            apartamento: { normal: 300, a_vista: 285 },
+            casa: { normal: 400, a_vista: 380 }
+        };
+        const PRECO_RATEIO = 50;
+        const unitTypeDisplay = {
+            apartamento: "Apartamento",
+            casa: "Casa"
+        };
+        const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-            text.innerText = message;
+        // --- Funções de UI ---
 
-            if (isError) {
-                content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-red-50 border border-red-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-                icon.classList.add('text-red-500');
-                text.classList.add('text-red-700');
-                button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-red-500 hover:bg-red-600';
-            } else {
-                content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-green-50 border border-green-300';
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
-                icon.classList.add('text-green-500');
-                text.classList.add('text-green-700');
-                button.className = 'mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors bg-green-500 hover:bg-green-600';
-            }
-            modal.classList.remove('hidden');
-        }
-
-        // Função para mostrar a mensagem de carregamento
-        function showLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            if (loadingMessage) {
-                loadingMessage.classList.remove('hidden');
-            }
-        }
-
-        // Função para esconder a mensagem de carregamento
-        function hideLoading() {
-            const loadingMessage = document.getElementById('loadingMessage');
-            if (loadingMessage) {
-                loadingMessage.classList.add('hidden');
-            }
-        }
-
-        // Função para formatar um número para moeda BRL
+        // Função para formatar moeda
         function formatCurrency(value) {
             return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Função para renderizar os dados financeiros (pagamentos e despesas)
+        // Funções para Modals e Mensagens
+        const messageContainer = document.getElementById('messageContainer');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const modalActions = document.getElementById('modalActions');
+
+        function showMessage(message, isError = false) {
+            const messageEl = document.createElement('div');
+            messageEl.className = `fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg transition-all duration-500 ease-in-out transform ${isError ? 'bg-red-500 text-white' : 'bg-green-500 text-white'} -translate-y-full`;
+            messageEl.textContent = message;
+            messageContainer.appendChild(messageEl);
+
+            setTimeout(() => {
+                messageEl.classList.remove('-translate-y-full');
+                messageEl.classList.add('translate-y-0');
+            }, 10);
+
+            setTimeout(() => {
+                messageEl.classList.remove('translate-y-0');
+                messageEl.classList.add('-translate-y-full');
+                setTimeout(() => messageEl.remove(), 500);
+            }, 3000);
+        }
+
+        function createModal(title, body, actions = []) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = body;
+            modalActions.innerHTML = '';
+            
+            actions.forEach(action => {
+                const button = document.createElement('button');
+                button.textContent = action.text;
+                button.className = action.className || 'ml-2 px-4 py-2 rounded-lg text-white font-medium bg-blue-600 hover:bg-blue-700 transition-colors';
+                button.onclick = () => {
+                    closeModal();
+                    if (action.onClick) action.onClick();
+                };
+                modalActions.appendChild(button);
+            });
+            
+            modalOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                modalOverlay.classList.remove('opacity-0');
+                modalContent.classList.add('show');
+            }, 10);
+        }
+
+        function closeModal() {
+            modalContent.classList.remove('show');
+            modalOverlay.classList.add('opacity-0');
+            setTimeout(() => {
+                modalOverlay.classList.add('hidden');
+            }, 300);
+        }
+
+        function showConfirmationModal(title, message, onConfirm) {
+            createModal(title, message, [
+                { text: 'Cancelar', className: 'px-4 py-2 rounded-lg text-gray-700 font-medium bg-gray-200 hover:bg-gray-300 transition-colors' },
+                { text: 'Confirmar', className: 'ml-2 px-4 py-2 rounded-lg text-white font-medium bg-red-600 hover:bg-red-700 transition-colors', onClick: onConfirm }
+            ]);
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        // --- Funções de Dados e Renderização ---
+
+        // Função para renderizar todos os dados no UI
         function renderFinancialData(payments, expenses) {
-            const noDataMessage = document.getElementById('noDataMessage');
             const tabsContainer = document.getElementById('tabsContainer');
-            const tableContainer = document.getElementById('financialTableContainer');
-
-            if (!noDataMessage || !tabsContainer || !tableContainer) {
-                console.error("Erro fatal: Elementos da UI não encontrados.");
-                showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
-                return;
-            }
-
+            const tableContainer = document.getElementById('tableContainer');
             tabsContainer.innerHTML = '';
             tableContainer.innerHTML = '';
 
-            if (payments.length === 0 && expenses.length === 0) {
-                noDataMessage.classList.remove('hidden');
-                return;
-            } else {
-                noDataMessage.classList.add('hidden');
-            }
-
-            // Agrupar pagamentos e despesas por mês e ano
-            const allData = [...payments, ...expenses];
-            const groupedData = allData.reduce((acc, item) => {
-                const monthYear = `${item.mes} de ${item.ano}`;
-                if (!acc[monthYear]) {
-                    acc[monthYear] = { payments: [], expenses: [] };
+            // Agrupa os dados por mês e ano
+            const monthlyData = payments.reduce((acc, payment) => {
+                const key = `${payment.mes}-${payment.ano}`;
+                if (!acc[key]) {
+                    acc[key] = { payments: [], expenses: [] };
                 }
-                if (item.valorReceita !== undefined) {
-                    acc[monthYear].payments.push(item);
-                } else {
-                    acc[monthYear].expenses.push(item);
-                }
+                acc[key].payments.push(payment);
                 return acc;
             }, {});
 
-            // Ordenar os meses do mais recente para o mais antigo
-            const sortedMonths = Object.keys(groupedData).sort((a, b) => {
-                const [monthA, yearA] = a.split(' de ');
-                const [monthB, yearB] = b.split(' de ');
-
-                if (parseInt(yearA) !== parseInt(yearB)) {
-                    return parseInt(yearB) - parseInt(yearA);
+            expenses.forEach(expense => {
+                const key = `${expense.mes}-${expense.ano}`;
+                if (!monthlyData[key]) {
+                    monthlyData[key] = { payments: [], expenses: [] };
                 }
-
-                return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
+                monthlyData[key].expenses.push(expense);
             });
 
-            // Cria as abas e o conteúdo da tabela
-            sortedMonths.forEach(monthYear => {
-                const monthData = groupedData[monthYear];
-                let totalReceitaMensal = 0;
-                let totalRateioMensal = 0;
-                let totalDespesaMensal = 0;
-                
-                // Calcular inadimplentes e totais de receita
-                const delinquentCounts = {
-                    "Apartamento": TOTAL_UNITS["Apartamento"],
-                    "Kitnet": TOTAL_UNITS["Kitnet"],
-                    "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
-                };
-                
-                // Decrementa o contador para cada pagamento encontrado
-                monthData.payments.forEach(p => {
-                    delinquentCounts[p.tipoUnidade]--;
-                    totalReceitaMensal += p.valorReceita;
-                    totalRateioMensal += p.valorRateio;
-                });
+            // Ordena os meses do mais recente para o mais antigo
+            const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+                const [monthA, yearA] = a.split('-');
+                const [monthB, yearB] = b.split('-');
+                const dateA = new Date(yearA, MONTHS.indexOf(monthA));
+                const dateB = new Date(yearB, MONTHS.indexOf(monthB));
+                return dateB - dateA;
+            });
 
-                // Calcula o total de despesas
-                monthData.expenses.forEach(e => {
-                    totalDespesaMensal += e.valor;
-                });
-                
-                // Ordenar os pagamentos de forma crescente por tipo e número da unidade
-                const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
-                monthData.payments.sort((a, b) => {
-                    const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
-                    const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
-                    
-                    if (typeIndexA !== typeIndexB) {
-                        return typeIndexA - typeIndexB;
-                    }
+            if (sortedMonths.length === 0) {
+                tableContainer.innerHTML = '<p class="text-center text-gray-500">Nenhum dado financeiro registrado ainda.</p>';
+                return;
+            }
 
-                    // Extrai apenas os números para a ordenação
-                    const numA = parseInt(a.unidade.replace(/\D/g, ''));
-                    const numB = parseInt(b.unidade.replace(/\D/g, ''));
-                    return numA - numB;
-                });
+            sortedMonths.forEach(key => {
+                const monthData = monthlyData[key];
+                const [month, year] = key.split('-');
 
                 // Cria o botão da aba
                 const tabButton = document.createElement('button');
-                tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
-                tabButton.textContent = monthYear;
-                tabButton.setAttribute('data-target', `tab-${monthYear.replace(/\s+/g, '-')}`);
+                tabButton.className = "tab-button text-gray-600 hover:text-gray-800 px-4 py-2 rounded-t-lg transition-colors";
+                tabButton.setAttribute('data-target', `tab-${key}`);
+                tabButton.textContent = `${month}/${year}`;
                 tabsContainer.appendChild(tabButton);
 
-                // Cria o contêiner da tabela para esta aba
+                // Cria o conteúdo da aba
                 const tableContent = document.createElement('div');
-                tableContent.id = `tab-${monthYear.replace(/\s+/g, '-')}`;
-                tableContent.className = "tab-content hidden";
-
-                // Adiciona o painel de resumo financeiro
-                const totalsDiv = document.createElement('div');
-                totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
-                totalsDiv.innerHTML = `
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500">Receita do Mês</p>
-                        <p class="text-xl font-bold text-blue-600">${formatCurrency(totalReceitaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p>
-                        <p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p>
-                        <p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
-                        <p class="text-xl font-bold text-green-600">${formatCurrency(totalReceitaMensal - totalDespesaMensal)}</p>
-                    </div>
-                `;
-                tableContent.appendChild(totalsDiv);
-                
-                // Adiciona o painel de inadimplentes dentro do painel do mês
-                const delinquentDiv = document.createElement('div');
-                delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
-                delinquentDiv.innerHTML = `
-                    <div class="mb-2 sm:mb-0">
-                        <p class="text-sm font-semibold text-gray-600">Inadimplentes</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p>
-                    </div>
-                `;
-                tableContent.appendChild(delinquentDiv);
+                tableContent.id = `tab-${key}`;
+                tableContent.className = "tab-content space-y-8 hidden";
 
                 // --- Tabela de Pagamentos ---
                 const paymentTableTitle = document.createElement('h3');
@@ -501,7 +435,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                <button onclick="window.deletePaymentConfirmation('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
@@ -513,7 +447,6 @@
                 } else {
                     paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
                 }
-
                 tableContent.appendChild(paymentsTable);
 
                 // --- Tabela de Despesas ---
@@ -546,7 +479,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${formatCurrency(expense.valor)}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                <button onclick="window.deleteExpenseConfirmation('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
@@ -575,16 +508,10 @@
             tabsContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('tab-button')) {
                     const targetId = e.target.getAttribute('data-target');
-
-                    // Esconde a aba anterior
                     if (currentActiveTab && document.getElementById(currentActiveTab)) {
                         document.getElementById(currentActiveTab).classList.add('hidden');
                     }
-
-                    // Remove a classe 'active' de todos os botões de aba
                     tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-
-                    // Mostra a nova aba e ativa o botão
                     document.getElementById(targetId).classList.remove('hidden');
                     e.target.classList.add('active');
                     currentActiveTab = targetId;
@@ -611,9 +538,9 @@
                 totalRateio += payment.valorRateio;
             });
 
-            totalReceitaElement.innerText = totalReceita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalRateioElement.innerText = totalRateio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            totalGeralElement.innerText = (totalReceita + totalRateio).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            totalReceitaElement.innerText = formatCurrency(totalReceita);
+            totalRateioElement.innerText = formatCurrency(totalRateio);
+            totalGeralElement.innerText = formatCurrency(totalReceita + totalRateio);
         }
 
         // Função para renderizar todos os dados no UI
@@ -672,7 +599,7 @@
         }
 
         // Função para deletar um pagamento
-        window.deletePayment = async (docId) => {
+        async function deletePayment(docId) {
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
@@ -684,10 +611,10 @@
             } finally {
                 hideLoading();
             }
-        };
+        }
 
         // Função para deletar uma despesa
-        window.deleteExpense = async (docId) => {
+        async function deleteExpense(docId) {
             try {
                 showLoading();
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
@@ -699,6 +626,23 @@
             } finally {
                 hideLoading();
             }
+        }
+
+        // Funções globais para botões de deleção nas tabelas
+        window.deletePaymentConfirmation = (docId) => {
+            showConfirmationModal(
+                'Confirmar Exclusão',
+                `<p>Tem certeza que deseja excluir este pagamento?</p><p class="mt-2 text-sm text-red-500 font-semibold">Esta ação não pode ser desfeita.</p>`,
+                () => deletePayment(docId)
+            );
+        };
+
+        window.deleteExpenseConfirmation = (docId) => {
+            showConfirmationModal(
+                'Confirmar Exclusão',
+                `<p>Tem certeza que deseja excluir esta despesa?</p><p class="mt-2 text-sm text-red-500 font-semibold">Esta ação não pode ser desfeita.</p>`,
+                () => deleteExpense(docId)
+            );
         };
         
         // Função principal que inicializa o aplicativo
@@ -706,15 +650,18 @@
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
+                auth = getAuth(app);
                 db = getFirestore(app);
-
+                
                 // Preenche os campos de ano com o ano atual
                 const currentYear = new Date().getFullYear();
                 document.getElementById('paymentYear').value = currentYear;
                 document.getElementById('expenseYear').value = currentYear;
 
-                // Autentica o usuário e, após o login, inicia a escuta em tempo real
+                const paymentForm = document.getElementById('paymentForm');
+                const expenseForm = document.getElementById('expenseForm');
+
+                // Lógica de autenticação e listeners de dados
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         isAuthReady = true;
@@ -726,19 +673,19 @@
                         onSnapshot(paymentsCol, (snapshot) => {
                             allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
-                            renderAllData(); // Chamada para renderizar
+                            renderAllData();
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações de pagamentos:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
                             hideLoading();
                         });
 
-                        // NOVO: Listener para despesas
+                        // Listener para despesas
                         const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
                         onSnapshot(expensesCol, (snapshot) => {
                             allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
-                            renderAllData(); // Chamada para renderizar
+                            renderAllData();
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações de despesas:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
@@ -760,7 +707,7 @@
                     }
                 });
 
-                const paymentForm = document.getElementById('paymentForm');
+                // Listeners de submit dos formulários
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
@@ -792,10 +739,9 @@
                         document.getElementById('paymentYear').value = new Date().getFullYear();
                     });
                 } else {
-                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                    console.error("Elemento paymentForm não encontrado.");
                 }
 
-                const expenseForm = document.getElementById('expenseForm');
                 if (expenseForm) {
                     expenseForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
@@ -819,15 +765,31 @@
                         document.getElementById('expenseYear').value = new Date().getFullYear();
                     });
                 } else {
-                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
+                    console.error("Elemento expenseForm não encontrado.");
                 }
+
+                // Lógica para alternar entre formulários
+                const showPaymentFormBtn = document.getElementById('showPaymentFormBtn');
+                const showExpenseFormBtn = document.getElementById('showExpenseFormBtn');
+                const paymentFormContainer = document.getElementById('paymentForm');
+                const expenseFormContainer = document.getElementById('expenseForm');
+                
+                showPaymentFormBtn.addEventListener('click', () => {
+                    paymentFormContainer.classList.remove('hidden');
+                    expenseFormContainer.classList.add('hidden');
+                });
+                
+                showExpenseFormBtn.addEventListener('click', () => {
+                    expenseFormContainer.classList.remove('hidden');
+                    paymentFormContainer.classList.add('hidden');
+                });
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
                 showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
             }
         }
-
+        
         document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
