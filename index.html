@@ -131,13 +131,6 @@
         </div>
     </div>
     
-    <!-- Botão para abrir o modal de relatório (NOVO POSICIONAMENTO) -->
-    <div class="no-print absolute top-4 right-4 z-20">
-        <button id="openReportModalBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105 text-sm sm:text-base">
-            Gerar Relatório
-        </button>
-    </div>
-
     <!-- Container Principal -->
     <div class="container-card relative">
         <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
@@ -165,6 +158,13 @@
                 <p class="text-gray-500 font-semibold text-base">Balanço Geral</p>
                 <p id="totalGeral" class="font-extrabold text-xl mt-1">R$ 0,00</p>
             </div>
+        </div>
+
+        <!-- Botão para abrir o modal de relatório - NOVA POSIÇÃO -->
+        <div class="no-print flex justify-center mb-8">
+            <button id="openReportModalBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105 text-base sm:text-lg">
+                Gerar Relatório Período
+            </button>
         </div>
 
         <!-- Formulário para Registrar Pagamentos -->
@@ -241,19 +241,19 @@
             <form id="expenseForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <!-- Campo de Descrição da Despesa -->
                 <div>
-                    <label for="expenseDescription" class="block text-gray-700 font-semibold mb-1">Descrição</label>
+                    <label for="expenseDescription" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Descrição</label>
                     <input type="text" id="expenseDescription" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
 
                 <!-- Campo de Valor da Despesa -->
                 <div>
-                    <label for="expenseValue" class="block text-gray-700 font-semibold mb-1">Valor</label>
+                    <label for="expenseValue" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Valor</label>
                     <input type="number" id="expenseValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
 
                 <!-- Campo de Mês da Despesa -->
                 <div>
-                    <label for="expenseMonth" class="block text-gray-700 font-semibold mb-1">Mês</label>
+                    <label for="expenseMonth" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Mês</label>
                     <select id="expenseMonth" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                         <option value="Janeiro">Janeiro</option>
                         <option value="Fevereiro">Fevereiro</option>
@@ -272,7 +272,7 @@
 
                 <!-- Campo de Ano da Despesa -->
                 <div>
-                    <label for="expenseYear" class="block text-gray-700 font-semibold mb-1">Ano</label>
+                    <label for="expenseYear" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Ano</label>
                     <input type="number" id="expenseYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
                 </div>
 
@@ -316,7 +316,7 @@
                 <form id="reportForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <!-- Data de Início -->
                     <div>
-                        <label for="startMonth" class="block text-gray-700 font-semibold mb-1">Mês Início</label>
+                        <label for="startMonth" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Mês Início</label>
                         <select id="startMonth" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
                             <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
                             <option value="Março">Março</option><option value="Abril">Abril</option>
@@ -327,12 +327,12 @@
                         </select>
                     </div>
                     <div>
-                        <label for="startYear" class="block text-gray-700 font-semibold mb-1">Ano Início</label>
+                        <label for="startYear" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Ano Início</label>
                         <input type="number" id="startYear" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
                     </div>
                     <!-- Data de Fim -->
                     <div>
-                        <label for="endMonth" class="block text-gray-700 font-semibold mb-1">Mês Fim</label>
+                        <label for="endMonth" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Mês Fim</label>
                         <select id="endMonth" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
                             <option value="Janeiro">Janeiro</option><option value="Fevereiro">Fevereiro</option>
                             <option value="Março">Março</option><option value="Abril">Abril</option>
@@ -343,7 +343,7 @@
                         </select>
                     </div>
                     <div>
-                        <label for="endYear" class="block text-gray-700 font-semibold mb-1">Ano Fim</label>
+                        <label for="endYear" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Ano Fim</label>
                         <input type="number" id="endYear" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
                     </div>
 
