@@ -229,7 +229,7 @@
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -276,7 +276,7 @@
             const text = document.getElementById('messageText');
             const button = modal.querySelector('button');
 
-            text.innerText = message;
+            text.innerHTML = message;
 
             if (isError) {
                 content.className = 'flex flex-col items-center p-8 rounded-xl shadow-2xl w-11/12 sm:w-2/3 md:w-1/2 lg:w-1/3 text-center bg-red-50 border border-red-300';
@@ -416,7 +416,12 @@
 
         // Inicialização do Firebase e autenticação
         async function initializeFirebase() {
+            showLoading();
             try {
+                if (!firebaseConfig) {
+                    throw new Error("Firebase configuration is missing.");
+                }
+
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
@@ -452,10 +457,12 @@
                         isAuthReady = true;
                         console.log("Usuário não autenticado. Operando em modo anônimo.");
                     }
+                    hideLoading();
                 });
             } catch (error) {
                 console.error("Erro ao inicializar Firebase:", error);
-                showMessage("Erro ao conectar com o banco de dados.", true);
+                showMessage("Erro ao conectar com o banco de dados. Por favor, tente recarregar a página. Detalhes: " + error.message, true);
+                hideLoading();
             }
         }
 
