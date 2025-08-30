@@ -268,6 +268,31 @@
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
+        
+        // Plugin para exibir o texto no centro do gráfico de rosca
+        const doughnutTextPlugin = {
+          id: 'doughnutText',
+          beforeDraw: function(chart, args, options) {
+            const { ctx, width, height } = chart;
+            const text = options.text;
+            
+            if (!text) return;
+
+            ctx.restore();
+            const fontSize = (height / 114).toFixed(2);
+            ctx.font = `bold ${fontSize}em 'Inter'`;
+            ctx.textBaseline = 'middle';
+            const textX = Math.round((width - ctx.measureText(text).width) / 2);
+            const textY = height / 2;
+            
+            // Define a cor do texto com base no valor (positivo/negativo)
+            const isPositive = parseFloat(text.replace('R$', '').replace('.', '').replace(',', '.')) >= 0;
+            ctx.fillStyle = isPositive ? '#16a34a' : '#dc2626';
+
+            ctx.fillText(text, textX, textY);
+            ctx.save();
+          }
+        };
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -464,7 +489,7 @@
 
                 // NOVO: Adiciona o canvas para o gráfico
                 const chartContainer = document.createElement('div');
-                chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6";
+                chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6 max-w-sm mx-auto";
                 const chartCanvas = document.createElement('canvas');
                 chartCanvas.id = `chart-${monthYear.replace(/\s+/g, '-')}`;
                 chartContainer.appendChild(chartCanvas);
@@ -630,35 +655,57 @@
 
             const ctx = canvas.getContext('2d');
             activeChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'doughnut',
                 data: {
                     labels: ['Receita', 'Despesa'],
                     datasets: [{
-                        label: 'Valores Mensais',
                         data: [totalReceitaMensal, totalDespesaMensal],
-                        backgroundColor: ['#4299e1', '#ef4444'],
-                        borderColor: ['#3182ce', '#b91c1c'],
-                        borderWidth: 1
+                        backgroundColor: ['#3b82f6', '#ef4444'],
+                        hoverBackgroundColor: ['#2563eb', '#dc2626'],
+                        borderColor: 'white',
+                        borderWidth: 2,
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                                }
-                            }
-                        }
-                    },
                     plugins: {
                         legend: {
-                            display: false
+                            position: 'bottom',
+                            labels: {
+                                padding: 10,
+                                font: {
+                                    size: 14,
+                                    family: 'Inter',
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Balanço do Mês',
+                            font: {
+                                size: 18,
+                                weight: 'bold',
+                                family: 'Inter',
+                            },
+                            color: '#1f2937'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const formattedValue = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                    return `${label}: ${formattedValue}`;
+                                }
+                            }
+                        },
+                        doughnutText: {
+                            text: formatCurrency(totalReceitaMensal - totalDespesaMensal)
                         }
-                    }
-                }
+                    },
+                    cutout: '70%'
+                },
+                plugins: [doughnutTextPlugin]
             });
         }
 
