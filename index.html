@@ -549,7 +549,26 @@
                 // Adiciona as linhas da tabela de despesas
                 const expenseTableBody = expensesTable.querySelector('tbody');
                 if (monthData.expenses.length > 0) {
-                    monthTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
+                    monthData.expenses.forEach(expense => {
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-gray-50 transition-colors";
+                        const valor = formatCurrency(expense.valor);
+
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${valor}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </td>
+                        `;
+                        expenseTableBody.appendChild(row);
+                    });
+                } else {
+                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
                 }
                 tableContent.appendChild(expensesTable);
                 tableContainer.appendChild(tableContent);
@@ -595,15 +614,13 @@
             }
 
             const monthYear = tabId.replace('tab-', '').replace(/-/g, ' ');
-            const monthData = allData.find(data => `${data.mes} de ${data.ano}` === monthYear);
-
-            if (!monthData) {
-                console.error("Dados do mês não encontrados para o gráfico.");
-                return;
-            }
-
-            const totalReceitaMensal = monthData.payments.reduce((acc, p) => acc + p.valorReceita, 0);
-            const totalDespesaMensal = monthData.expenses.reduce((acc, e) => acc + e.valor, 0);
+            
+            // Filtra os dados globais para o mês/ano selecionado
+            const monthlyPayments = allPayments.filter(p => `${p.mes} de ${p.ano}` === monthYear);
+            const monthlyExpenses = allExpenses.filter(e => `${e.mes} de ${e.ano}` === monthYear);
+            
+            const totalReceitaMensal = monthlyPayments.reduce((acc, p) => acc + p.valorReceita, 0);
+            const totalDespesaMensal = monthlyExpenses.reduce((acc, e) => acc + e.valor, 0);
 
             const canvas = document.getElementById(`chart-${monthYear.replace(/\s+/g, '-')}`);
             if (!canvas) {
