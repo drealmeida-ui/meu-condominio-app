@@ -169,13 +169,61 @@
             <button onclick="document.getElementById('messageModal').classList.add('hidden')" class="mt-6 px-6 py-2 rounded-lg font-semibold text-white transition-colors">Fechar</button>
         </div>
     </div>
-    
-    <!-- Container Principal -->
-    <div class="container-card relative">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
-            Controle de Receita e Despesa
-        </h1>
-        <p class="text-lg text-gray-600 text-center mb-8">
+
+    <!-- Container Principal do Formulário de Login -->
+    <div id="login-form-container" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-8">
+        <div class="bg-white/80 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-2xl border-2 border-gray-100 w-full max-w-sm transform transition-all duration-300 hover:scale-[1.01] hover:shadow-3xl">
+            <div class="text-center mb-8">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 22h20L12 2zm0 4.414L18.586 20H5.414L12 6.414zM11 10h2v6h-2v-6zm0 8h2v2h-2v-2z"/>
+                </svg>
+                <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight mb-2">Login</h1>
+                <p class="text-gray-500">Acesse seu painel financeiro.</p>
+            </div>
+            
+            <form id="loginForm" class="flex flex-col gap-5">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                    <input type="email" id="email" required class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                    <!-- Container com posicionamento relativo para o campo de senha e o ícone -->
+                    <div class="relative">
+                        <input type="password" id="password" required class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm pr-10">
+                        <!-- Botão para alternar a visibilidade da senha -->
+                        <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors" onclick="togglePasswordVisibility()">
+                            <!-- Ícone de olho aberto -->
+                            <svg id="eyeOpen" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <!-- Ícone de olho fechado (inicialmente oculto) -->
+                            <svg id="eyeClosed" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 1.22 0 2.404.225 3.525.625M17.825 10.125A10.05 10.05 0 0122 12c-1.274 4.057-5.064 7-9.542 7a9.96 9.96 0 01-2.97-.406M16 12a4 4 0 01-8 0"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12l2.542-2.542M19.542 12l-2.542-2.542M12 5v2m0 12v-2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 mt-4 text-white rounded-xl font-bold bg-blue-600 hover:bg-blue-700 transition-colors shadow-lg transform hover:scale-105">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Container Principal do Painel Financeiro - Inicialmente oculto -->
+    <div id="main-dashboard-container" class="container-card relative hidden">
+        <div class="no-print flex justify-between items-center mb-4">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
+                Controle de Receita e Despesa
+            </h1>
+            <button id="logoutBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                Sair
+            </button>
+        </div>
+        <p class="text-lg text-gray-600 mb-8">
             Condomínio Pirâmide
         </p>
 
@@ -413,9 +461,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // Importa as dependências do Firebase na versão mais estável
+        // Importa as dependências do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -429,7 +477,6 @@
           appId: "1:753496447014:web:aa9cde68924dc445466ee7"
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Dados de precificação e contagem total de unidades
         const PRECOS = {
@@ -458,6 +505,24 @@
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
+        let auth; // Declarado aqui para ser acessível globalmente
+
+        // Função para alternar a visibilidade da senha
+        window.togglePasswordVisibility = function() {
+            const passwordInput = document.getElementById('password');
+            const eyeOpen = document.getElementById('eyeOpen');
+            const eyeClosed = document.getElementById('eyeClosed');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+            }
+        };
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -1147,7 +1212,7 @@
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
+                auth = getAuth(app); // Inicializa a autenticação
                 db = getFirestore(app);
 
                 // Preenche os campos de ano com o ano atual
@@ -1157,10 +1222,13 @@
                 document.getElementById('startYear').value = currentYear;
                 document.getElementById('endYear').value = currentYear;
 
-
-                // Autentica o usuário e, após o login, inicia a escuta em tempo real
+                // Gerencia a visibilidade das seções com base no estado de autenticação
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // Se o usuário está logado, esconde o formulário de login e mostra o painel
+                        document.getElementById('login-form-container').classList.add('hidden');
+                        document.getElementById('main-dashboard-container').classList.remove('hidden');
+                        
                         isAuthReady = true;
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
@@ -1190,35 +1258,73 @@
                         });
 
                     } else {
-                        console.log("Usuário não autenticado. Iniciando o processo de login.");
-                        if (initialAuthToken) {
-                            try {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (e) {
-                                console.error("Erro ao autenticar com token:", e);
-                                showMessage("Erro de autenticação. Verifique as configurações.", true);
-                            }
-                        } else {
-                            await signInAnonymously(auth);
-                        }
+                        // Se não está logado, esconde o painel e mostra o formulário de login
+                        document.getElementById('login-form-container').classList.remove('hidden');
+                        document.getElementById('main-dashboard-container').classList.add('hidden');
+                        isAuthReady = false;
+                        hideLoading();
                     }
                 });
+
+                // NOVO: Listener para o formulário de login
+                const loginForm = document.getElementById('loginForm');
+                if (loginForm) {
+                    loginForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        showLoading();
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+
+                        try {
+                            await signInWithEmailAndPassword(auth, email, password);
+                            showMessage("Login realizado com sucesso!");
+                        } catch (error) {
+                            console.error("Erro de login:", error);
+                            // Mapeia erros comuns do Firebase para mensagens amigáveis
+                            let errorMessage = "Erro ao fazer login. Verifique seu e-mail e senha.";
+                            if (error.code === 'auth/invalid-email') {
+                                errorMessage = "E-mail inválido. Por favor, verifique o formato.";
+                            } else if (error.code === 'auth/user-disabled') {
+                                errorMessage = "Sua conta foi desativada. Entre em contato com o suporte.";
+                            } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                                errorMessage = "E-mail ou senha incorretos.";
+                            }
+                            showMessage(errorMessage, true);
+                        } finally {
+                            hideLoading();
+                        }
+                    });
+                } else {
+                    console.error("Elemento loginForm não encontrado.");
+                }
+
+                // NOVO: Listener para o botão de sair (logout)
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        try {
+                            await signOut(auth);
+                            showMessage("Você saiu da sua conta.");
+                        } catch (error) {
+                            console.error("Erro ao sair:", error);
+                            showMessage("Erro ao sair. Tente novamente.", true);
+                        }
+                    });
+                }
+
 
                 const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
-
                         const unitNumber = document.getElementById('unitNumber').value;
                         const unitType = document.getElementById('unitType').value;
                         const paymentType = document.getElementById('paymentType').value;
                         const paymentMonth = document.getElementById('paymentMonth').value;
                         const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
-
                         const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
                         const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-
                         const newPayment = {
                             unidade: unitNumber,
                             tipoUnidade: unitType,
@@ -1229,9 +1335,7 @@
                             valorRateio: valorRateio,
                             dataRegistro: new Date()
                         };
-
                         await addPayment(newPayment);
-
                         paymentForm.reset();
                         document.getElementById('paymentYear').value = new Date().getFullYear();
                     });
@@ -1243,12 +1347,10 @@
                 if (expenseForm) {
                     expenseForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
-
                         const description = document.getElementById('expenseDescription').value;
                         const value = parseFloat(document.getElementById('expenseValue').value);
                         const month = document.getElementById('expenseMonth').value;
                         const year = parseInt(document.getElementById('expenseYear').value);
-
                         const newExpense = {
                             descricao: description,
                             valor: value,
@@ -1256,9 +1358,7 @@
                             ano: year,
                             dataRegistro: new Date()
                         };
-
                         await addExpense(newExpense);
-
                         expenseForm.reset();
                         document.getElementById('expenseYear').value = new Date().getFullYear();
                     });
@@ -1267,7 +1367,7 @@
                 }
                 
                 setupReportModal();
-
+                
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
                 showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
@@ -1278,4 +1378,3 @@
     </script>
 </body>
 </html>
-
