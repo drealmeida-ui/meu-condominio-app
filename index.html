@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Receita e Despesa</title>
+    <title>Receita e Despesas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -217,7 +217,7 @@
     <div id="main-dashboard-container" class="container-card relative hidden">
         <div class="no-print flex justify-between items-center mb-4">
             <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
-                Controle de Receita e Despesa
+                Receita e Despesas
             </h1>
             <button id="logoutBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
                 Sair
@@ -250,44 +250,8 @@
         <!-- Botão para abrir o modal de relatório - NOVA POSIÇÃO -->
         <div class="no-print flex justify-center mb-8">
             <button id="openReportModalBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105 text-base sm:text-lg">
-                Gerar Relatório por Período
+                Gerar Relatório Período
             </button>
-        </div>
-        
-        <!-- NOVO: Seção de Configurações de Preços -->
-        <div class="no-print bg-amber-50 p-6 rounded-xl border-2 border-amber-200 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Configurações de Preços</h2>
-            <p class="text-gray-600 mb-4">Valores base para os pagamentos (não editáveis).</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                <div>
-                    <label for="priceApto" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Apto. (Normal)</label>
-                    <input type="text" id="priceApto" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceAptoDesc" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Apto. (Desconto)</label>
-                    <input type="text" id="priceAptoDesc" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceKitnet" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Kitnet (Normal)</label>
-                    <input type="text" id="priceKitnet" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceKitnetDesc" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Kitnet (Desconto)</label>
-                    <input type="text" id="priceKitnetDesc" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceSala" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Sala (Normal)</label>
-                    <input type="text" id="priceSala" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceSalaDesc" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Sala (Desconto)</label>
-                    <input type="text" id="priceSalaDesc" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-                <div>
-                    <label for="priceRateio" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Rateio</label>
-                    <input type="text" id="priceRateio" disabled class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-gray-200 text-gray-800 font-semibold focus:outline-none">
-                </div>
-            </div>
         </div>
 
         <!-- Formulário para Registrar Pagamentos -->
@@ -406,6 +370,69 @@
                 </div>
             </form>
         </div>
+        
+        <!-- Formulário para Configurações de Preços -->
+        <div class="no-print bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Configurações de Preços</h2>
+            <form id="priceSettingsForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 items-center">
+                <!-- Apartamentos -->
+                <div class="flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Apartamentos</label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label for="apartamentoNormal" class="block text-xs font-semibold text-gray-500 mb-1">Valor Normal</label>
+                            <input type="number" id="apartamentoNormal" value="629.00" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                        <div class="flex-1">
+                            <label for="apartamentoDesconto" class="block text-xs font-semibold text-gray-500 mb-1">Valor com Desconto</label>
+                            <input type="number" id="apartamentoDesconto" value="600.12" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kitnets -->
+                <div class="flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kitnets</label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label for="kitnetNormal" class="block text-xs font-semibold text-gray-500 mb-1">Valor Normal</label>
+                            <input type="number" id="kitnetNormal" value="524.51" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                        <div class="flex-1">
+                            <label for="kitnetDesconto" class="block text-xs font-semibold text-gray-500 mb-1">Valor com Desconto</label>
+                            <input type="number" id="kitnetDesconto" value="498.62" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Salas Comerciais -->
+                <div class="flex flex-col">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Salas Comerciais</label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label for="salaNormal" class="block text-xs font-semibold text-gray-500 mb-1">Valor Normal</label>
+                            <input type="number" id="salaNormal" value="268.31" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                        <div class="flex-1">
+                            <label for="salaDesconto" class="block text-xs font-semibold text-gray-500 mb-1">Valor com Desconto</label>
+                            <input type="number" id="salaDesconto" value="250.65" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rateio -->
+                <div class="flex flex-col sm:col-span-3 md:col-span-1">
+                    <label for="rateioValor" class="block text-sm font-medium text-gray-700 mb-2">Valor do Rateio</label>
+                    <input type="number" id="rateioValor" value="137.70" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                </div>
+                
+                <div class="sm:col-span-3 md:col-span-3">
+                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105">
+                        Salvar Configurações
+                    </button>
+                </div>
+            </form>
+        </div>
 
 
         <!-- Seção de Pagamentos Registrados com Abas e Tabela -->
@@ -435,7 +462,7 @@
                 </svg>
             </button>
             <div id="reportFormContainer" class="no-print bg-green-50 p-6 rounded-xl border-2 border-green-200 mb-8">
-                <h2 class="text-2xl font-bold text-gray-800">Gerar Relatório por Período</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Gerar Relatório por Período</h2>
                 <form id="reportForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                     <!-- Data de Início -->
                     <div>
@@ -500,7 +527,7 @@
         // Importa as dependências do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
@@ -510,17 +537,12 @@
           projectId: "controlepiramide",
           storageBucket: "controlepiramide.firebasestorage.app",
           messagingSenderId: "753496447014",
-          appId: "1:753496447014:web:aa9cde68924dc445466ee7"
+          appId: "1:7534947014:web:aa9cde68924dc445466ee7"
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Dados de precificação e contagem total de unidades
-        const PRECOS = {
-            "Apartamento": { normal: 629.00, a_vista: 629.00 - 28.88 },
-            "Kitnet": { normal: 524.51, a_vista: 524.51 - 25.89 },
-            "Sala Comercial": { normal: 268.31, a_vista: 268.31 - 17.66 }
-        };
-        const PRECO_RATEIO = 137.70;
+        // Constantes e variáveis globais
+        let priceSettings = {}; // Será preenchido com dados do Firestore
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
         const TOTAL_UNITS = {
@@ -537,11 +559,11 @@
 
         let db;
         let isAuthReady = false;
-        let currentActiveTab = ''; // Variável para armazenar a aba ativa
+        let currentActiveTab = ''; 
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
-        let auth; // Declarado aqui para ser acessível globalmente
+        let auth; 
 
         // Função para alternar a visibilidade da senha
         window.togglePasswordVisibility = function() {
@@ -899,16 +921,15 @@
             }
         }
         
-        // NOVO: Função para renderizar o gráfico de barras da aba ativa
+        // Função para renderizar o gráfico de barras da aba ativa
         function renderChartForTab(tabId) {
-            // Destruir o gráfico anterior, se existir
+            if (!isAuthReady) return;
             if (activeChart) {
                 activeChart.destroy();
             }
 
             const monthYear = tabId.replace('tab-', '').replace(/-/g, ' ');
             
-            // Filtra os dados globais para o mês/ano selecionado
             const monthlyPayments = allPayments.filter(p => `${p.mes} de ${p.ano}` === monthYear);
             const monthlyExpenses = allExpenses.filter(e => `${e.mes} de ${e.ano}` === monthYear);
             
@@ -917,7 +938,6 @@
 
             const canvas = document.getElementById(`chart-${monthYear.replace(/\s+/g, '-')}`);
             if (!canvas) {
-                console.error("Elemento canvas do gráfico não encontrado.");
                 return;
             }
 
@@ -977,20 +997,18 @@
             });
         }
         
-        // NOVO: Função para gerar o relatório do período
+        // Função para gerar o relatório do período
         function generateReport() {
             const startMonth = document.getElementById('startMonth').value;
             const startYear = parseInt(document.getElementById('startYear').value);
             const endMonth = document.getElementById('endMonth').value;
             const endYear = parseInt(document.getElementById('endYear').value);
 
-            // Validação simples
             if (endYear < startYear || (endYear === startYear && MESES.indexOf(endMonth) < MESES.indexOf(startMonth))) {
                 showMessage("O mês/ano de fim deve ser posterior ou igual ao de início.", true);
                 return;
             }
 
-            // Filtra os dados com base no período selecionado
             const filteredPayments = allPayments.filter(p => {
                 const pMonthIndex = MESES.indexOf(p.mes);
                 const pYear = p.ano;
@@ -1007,7 +1025,6 @@
                 return startDateValid && endDateValid;
             });
 
-            // Calcula os totais do período
             const totalReceita = filteredPayments.reduce((sum, p) => sum + p.valorReceita, 0);
             const totalRateio = filteredPayments.reduce((sum, p) => sum + p.valorRateio, 0);
             const totalDespesa = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
@@ -1016,7 +1033,6 @@
             const balanceColor = totalGeral >= 0 ? 'text-green-600' : 'text-red-600';
             const reportContent = document.getElementById('reportContent');
             
-            // Renderiza o conteúdo do relatório
             reportContent.innerHTML = `
                 <!-- NOVO: Texto de introdução do relatório -->
                 <p class="text-sm text-gray-600 mb-4">Este relatório apresenta um resumo financeiro do condomínio no período de <strong>${startMonth}/${startYear}</strong> a <strong>${endMonth}/${endYear}</strong>. Os dados abaixo detalham as receitas, despesas e o balanço geral do período.</p>
@@ -1047,7 +1063,6 @@
             
             document.getElementById('reportContainer').classList.remove('hidden');
 
-            // Renderiza o gráfico do relatório
             const ctx = document.getElementById('reportChart').getContext('2d');
             if(activeChart) activeChart.destroy();
             activeChart = new Chart(ctx, {
@@ -1078,7 +1093,7 @@
                         y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } },
                         x: { grid: { display: false } }
                     }
-                }
+                    }
             });
         }
         
@@ -1115,7 +1130,7 @@
             totalDespesaElement.innerText = formatCurrency(totalDespesa);
             totalGeralElement.innerText = formatCurrency(totalGeral);
 
-            // NOVO: Altera a cor do balanço geral com base no valor
+            // Altera a cor do balanço geral com base no valor
             totalGeralElement.classList.remove('text-green-600', 'text-red-600');
             if (totalGeral >= 0) {
                 totalGeralElement.classList.add('text-green-600');
@@ -1209,7 +1224,7 @@
             }
         };
         
-        // NOVO: Adiciona o listener para o formulário de relatório
+        // Adiciona o listener para o formulário de relatório
         function setupReportModal() {
             const openBtn = document.getElementById('openReportModalBtn');
             const closeBtn = document.getElementById('closeReportModalBtn');
@@ -1224,13 +1239,11 @@
             
             openBtn.addEventListener('click', () => {
                 modal.classList.remove('hidden');
-                // Limpa o conteúdo e esconde o relatório anterior
                 reportContainer.classList.add('hidden');
             });
             
             closeBtn.addEventListener('click', () => {
                 modal.classList.add('hidden');
-                // Destrói o gráfico ao fechar o modal para evitar memory leaks
                 if (activeChart) {
                     activeChart.destroy();
                     activeChart = null;
@@ -1243,74 +1256,76 @@
             });
         }
         
-        // NOVO: Função para popular os campos da seção de preços
-        function populatePriceFields() {
-            const priceApto = PRECOS["Apartamento"].normal;
-            const priceAptoDesc = PRECOS["Apartamento"].a_vista;
-            const priceKitnet = PRECOS["Kitnet"].normal;
-            const priceKitnetDesc = PRECOS["Kitnet"].a_vista;
-            const priceSala = PRECOS["Sala Comercial"].normal;
-            const priceSalaDesc = PRECOS["Sala Comercial"].a_vista;
-            const priceRateio = PRECO_RATEIO;
-        
-            document.getElementById('priceApto').value = formatCurrency(priceApto);
-            document.getElementById('priceAptoDesc').value = formatCurrency(priceAptoDesc);
-            document.getElementById('priceKitnet').value = formatCurrency(priceKitnet);
-            document.getElementById('priceKitnetDesc').value = formatCurrency(priceKitnetDesc);
-            document.getElementById('priceSala').value = formatCurrency(priceSala);
-            document.getElementById('priceSalaDesc').value = formatCurrency(priceSalaDesc);
-            document.getElementById('priceRateio').value = formatCurrency(priceRateio);
-        }
-
         // Função principal que inicializa o aplicativo
         async function main() {
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                auth = getAuth(app); // Inicializa a autenticação
+                auth = getAuth(app); 
                 db = getFirestore(app);
-                
-                populatePriceFields(); // Preenche os campos de preço na inicialização
 
-                // FORÇA O LOGOUT para garantir que o formulário de login apareça primeiro
                 await signOut(auth);
 
-                // Preenche os campos de ano com o ano atual
                 const currentYear = new Date().getFullYear();
                 document.getElementById('paymentYear').value = currentYear;
                 document.getElementById('expenseYear').value = currentYear;
                 document.getElementById('startYear').value = currentYear;
                 document.getElementById('endYear').value = currentYear;
-
-                // Gerencia a visibilidade das seções com base no estado de autenticação
+                
+                // Listener para autenticação
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // Se o usuário está logado, esconde o formulário de login e mostra o painel
                         document.getElementById('login-form-container').classList.add('hidden');
                         document.getElementById('main-dashboard-container').classList.remove('hidden');
-                        
                         isAuthReady = true;
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
+                        
+                        // Listener para as configurações de preço
+                        const priceSettingsDocRef = doc(db, `artifacts/${appId}/public/data/price_settings/config`);
+                        onSnapshot(priceSettingsDocRef, (docSnap) => {
+                            if (docSnap.exists()) {
+                                priceSettings = docSnap.data();
+                                // Preenche os campos do formulário com os valores do banco de dados
+                                document.getElementById('apartamentoNormal').value = priceSettings.apartamento.normal;
+                                document.getElementById('apartamentoDesconto').value = priceSettings.apartamento.a_vista;
+                                document.getElementById('kitnetNormal').value = priceSettings.kitnet.normal;
+                                document.getElementById('kitnetDesconto').value = priceSettings.kitnet.a_vista;
+                                document.getElementById('salaNormal').value = priceSettings.sala.normal;
+                                document.getElementById('salaDesconto').value = priceSettings.sala.a_vista;
+                                document.getElementById('rateioValor').value = priceSettings.rateio;
+                            } else {
+                                console.log("Nenhuma configuração de preço encontrada. Usando valores padrão.");
+                                // Configuração inicial se o documento não existir
+                                priceSettings = {
+                                    apartamento: { normal: 629.00, a_vista: 600.12 },
+                                    kitnet: { normal: 524.51, a_vista: 498.62 },
+                                    sala: { normal: 268.31, a_vista: 250.65 },
+                                    rateio: 137.70
+                                };
+                            }
+                        }, (error) => {
+                            console.error("Erro ao ouvir as configurações de preço:", error);
+                        });
 
                         // Listener para pagamentos
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                         onSnapshot(paymentsCol, (snapshot) => {
                             allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
-                            renderAllData(); // Chamada para renderizar
+                            renderAllData(); 
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações de pagamentos:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
                             hideLoading();
                         });
 
-                        // NOVO: Listener para despesas
+                        // Listener para despesas
                         const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
                         onSnapshot(expensesCol, (snapshot) => {
                             allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                             console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
-                            renderAllData(); // Chamada para renderizar
+                            renderAllData(); 
                         }, (error) => {
                             console.error("Erro ao ouvir atualizações de despesas:", error);
                             showMessage("Erro de sincronização com o banco de dados.", true);
@@ -1318,7 +1333,6 @@
                         });
 
                     } else {
-                        // Se não está logado, esconde o painel e mostra o formulário de login
                         document.getElementById('login-form-container').classList.remove('hidden');
                         document.getElementById('main-dashboard-container').classList.add('hidden');
                         isAuthReady = false;
@@ -1326,7 +1340,7 @@
                     }
                 });
 
-                // NOVO: Listener para o formulário de login
+                // Listener para o formulário de login
                 const loginForm = document.getElementById('loginForm');
                 if (loginForm) {
                     loginForm.addEventListener('submit', async (e) => {
@@ -1340,7 +1354,6 @@
                             showMessage("Login realizado com sucesso!");
                         } catch (error) {
                             console.error("Erro de login:", error);
-                            // Mapeia erros comuns do Firebase para mensagens amigáveis
                             let errorMessage = "Erro ao fazer login. Verifique seu e-mail e senha.";
                             if (error.code === 'auth/invalid-email') {
                                 errorMessage = "E-mail inválido. Por favor, verifique o formato.";
@@ -1358,7 +1371,7 @@
                     console.error("Elemento loginForm não encontrado.");
                 }
 
-                // NOVO: Listener para o botão de sair (logout)
+                // Listener para o botão de sair (logout)
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', async () => {
@@ -1372,6 +1385,41 @@
                     });
                 }
 
+                // Listener para o formulário de preços
+                const priceSettingsForm = document.getElementById('priceSettingsForm');
+                if(priceSettingsForm) {
+                    priceSettingsForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        showLoading();
+
+                        const updatedSettings = {
+                            apartamento: {
+                                normal: parseFloat(document.getElementById('apartamentoNormal').value),
+                                a_vista: parseFloat(document.getElementById('apartamentoDesconto').value)
+                            },
+                            kitnet: {
+                                normal: parseFloat(document.getElementById('kitnetNormal').value),
+                                a_vista: parseFloat(document.getElementById('kitnetDesconto').value)
+                            },
+                            sala: {
+                                normal: parseFloat(document.getElementById('salaNormal').value),
+                                a_vista: parseFloat(document.getElementById('salaDesconto').value)
+                            },
+                            rateio: parseFloat(document.getElementById('rateioValor').value)
+                        };
+
+                        try {
+                            const docRef = doc(db, `artifacts/${appId}/public/data/price_settings`, 'config');
+                            await setDoc(docRef, updatedSettings, { merge: true });
+                            showMessage("Configurações de preço salvas com sucesso!");
+                        } catch(error) {
+                            console.error("Erro ao salvar configurações de preço:", error);
+                            showMessage("Erro ao salvar as configurações. Tente novamente.", true);
+                        } finally {
+                            hideLoading();
+                        }
+                    });
+                }
 
                 const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
@@ -1383,8 +1431,9 @@
                         const paymentMonth = document.getElementById('paymentMonth').value;
                         const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
-                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+                        
+                        const valorReceita = priceSettings[unitType.toLowerCase()].normal;
+                        const valorRateio = rateioPaid ? priceSettings.rateio : 0;
                         const newPayment = {
                             unidade: unitNumber,
                             tipoUnidade: unitType,
