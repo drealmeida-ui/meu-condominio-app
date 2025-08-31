@@ -154,42 +154,6 @@
 </head>
 <body class="bg-gray-100 p-4 sm:p-8">
 
-    <!-- Seção de Login - Visível por padrão -->
-    <div id="login-section" class="flex items-center justify-center min-h-screen bg-gray-100">
-        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-            <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24 mx-auto mb-4" />
-            
-            <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Acesso Restrito</h2>
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label for="email" class="block text-gray-700 font-semibold mb-2">E-mail</label>
-                    <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                </div>
-                <!-- NOVO: Campo de senha com o ícone de olho -->
-                <div class="mb-6 relative">
-                    <label for="password" class="block text-gray-700 font-semibold mb-2">Senha</label>
-                    <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                    <!-- Ícone de olho -->
-                    <div id="togglePassword" class="absolute inset-y-0 right-0 top-6 pr-3 flex items-center cursor-pointer">
-                        <!-- Ícone de mostrar senha (olho aberto) -->
-                        <svg id="eyeIconOpen" class="h-5 w-5 text-gray-500 hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
-                        <!-- Ícone de esconder senha (olho riscado) -->
-                        <svg id="eyeIconClosed" class="h-5 w-5 text-gray-500 hover:text-gray-700 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 1.455 0 2.894.27 4.256.774M10.5 13.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.957 16.327A10.05 10.05 0 0012 5C7.522 5 3.732 7.943 2.458 12c.983 3.12 3.284 5.343 5.922 6.577"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6"></path>
-                        </svg>
-                    </div>
-                </div>
-                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">Entrar</button>
-            </form>
-            <p id="loginMessage" class="mt-4 text-center text-red-500"></p>
-        </div>
-    </div>
-
     <!-- Mensagem de carregamento e erro/sucesso -->
     <div id="loadingMessage" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-2xl">
@@ -206,20 +170,13 @@
         </div>
     </div>
     
-    <!-- Container Principal do Aplicativo - Escondido por padrão -->
-    <div id="main-app" class="container-card relative hidden">
-        <div class="flex items-center mb-4 no-print">
-            <!-- NOVO: Container para logo e título centralizados juntos -->
-            <div class="flex-1 flex items-center justify-center space-x-4">
-                <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24" />
-                <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
-                    Condomínio Pirâmide
-                </h1>
-            </div>
-            <button id="logoutBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors">Sair</button>
-        </div>
-        <p class="text-lg text-gray-600 text-center mb-8">
+    <!-- Container Principal -->
+    <div class="container-card relative">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
             Controle de Receita e Despesa
+        </h1>
+        <p class="text-lg text-gray-600 text-center mb-8">
+            Condomínio Pirâmide
         </p>
 
         <!-- Seção de Resumo Total -->
@@ -458,7 +415,7 @@
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -472,6 +429,7 @@
           appId: "1:753496447014:web:aa9cde68924dc445466ee7"
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Dados de precificação e contagem total de unidades
         const PRECOS = {
@@ -495,27 +453,11 @@
         };
 
         let db;
-        let auth;
         let isAuthReady = false;
         let currentActiveTab = ''; // Variável para armazenar a aba ativa
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
-
-        // Elementos da UI
-        const loginSection = document.getElementById('login-section');
-        const mainApp = document.getElementById('main-app');
-        const loginForm = document.getElementById('loginForm');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const loginMessage = document.getElementById('loginMessage');
-        const paymentForm = document.getElementById('paymentForm');
-        const expenseForm = document.getElementById('expenseForm');
-        const tabsContainer = document.getElementById('tabsContainer');
-        const financialTableContainer = document.getElementById('financialTableContainer');
-        const noDataMessage = document.getElementById('noDataMessage');
-
-        // Flag para garantir que os listeners de dados só sejam inicializados uma vez
-        let dataListenersInitialized = false;
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -567,7 +509,11 @@
 
         // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
-            if (!noDataMessage || !tabsContainer || !financialTableContainer) {
+            const noDataMessage = document.getElementById('noDataMessage');
+            const tabsContainer = document.getElementById('tabsContainer');
+            const tableContainer = document.getElementById('financialTableContainer');
+
+            if (!noDataMessage || !tabsContainer || !tableContainer) {
                 console.error("Erro fatal: Elementos da UI não encontrados.");
                 showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
                 return;
@@ -602,7 +548,7 @@
 
             // Limpa o conteúdo antes de renderizar
             tabsContainer.innerHTML = '';
-            financialTableContainer.innerHTML = '';
+            tableContainer.innerHTML = '';
 
             if (payments.length === 0 && expenses.length === 0) {
                 noDataMessage.classList.remove('hidden');
@@ -833,7 +779,7 @@
                     expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
                 }
                 tableContent.appendChild(expensesTable);
-                financialTableContainer.appendChild(tableContent);
+                tableContainer.appendChild(tableContent);
             });
 
             // Ativa a aba salva, ou a primeira se não houver uma salva
@@ -852,7 +798,7 @@
             }
         }
         
-        // Função para renderizar o gráfico de barras da aba ativa
+        // NOVO: Função para renderizar o gráfico de barras da aba ativa
         function renderChartForTab(tabId) {
             // Destruir o gráfico anterior, se existir
             if (activeChart) {
@@ -930,7 +876,7 @@
             });
         }
         
-        // Função para gerar o relatório do período
+        // NOVO: Função para gerar o relatório do período
         function generateReport() {
             const startMonth = document.getElementById('startMonth').value;
             const startYear = parseInt(document.getElementById('startYear').value);
@@ -1031,7 +977,6 @@
                         y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } },
                         x: { grid: { display: false } }
                     }
-                    
                 }
             });
         }
@@ -1085,34 +1030,6 @@
             hideLoading();
         }
 
-        // NOVO: Função para inicializar os listeners de dados
-        function initializeDataListeners() {
-            if (dataListenersInitialized) return;
-            dataListenersInitialized = true;
-
-            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-            const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-
-            // Listener em tempo real para pagamentos
-            onSnapshot(paymentsCol, (snapshot) => {
-                allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAllData();
-            }, (error) => {
-                console.error("Erro no listener de pagamentos:", error);
-                showMessage("Erro ao carregar pagamentos.", true);
-            });
-
-            // Listener em tempo real para despesas
-            onSnapshot(expensesCol, (snapshot) => {
-                allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAllData();
-            }, (error) => {
-                console.error("Erro no listener de despesas:", error);
-                showMessage("Erro ao carregar despesas.", true);
-            });
-        }
-
-
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
@@ -1161,187 +1078,204 @@
             }
         }
 
-        // Funções globais para deleção (acessíveis pelo HTML)
-        window.deletePayment = async (id) => {
+        // Função para deletar um pagamento
+        window.deletePayment = async (docId) => {
             try {
                 showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, id));
-                console.log("Pagamento excluído com sucesso.");
-                showMessage("Pagamento excluído com sucesso!");
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
+                console.log("Documento de pagamento removido com sucesso.");
+                showMessage("Pagamento removido com sucesso!");
             } catch (error) {
-                console.error("Erro ao excluir pagamento:", error);
-                showMessage("Erro ao excluir o pagamento.", true);
+                console.error("Erro ao deletar documento de pagamento:", error);
+                showMessage("Erro ao deletar o pagamento.", true);
             } finally {
                 hideLoading();
             }
         };
 
-        window.deleteExpense = async (id) => {
+        // Função para deletar uma despesa
+        window.deleteExpense = async (docId) => {
             try {
                 showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, id));
-                console.log("Despesa excluída com sucesso.");
-                showMessage("Despesa excluída com sucesso!");
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
+                console.log("Documento de despesa removido com sucesso.");
+                showMessage("Despesa removida com sucesso!");
             } catch (error) {
-                console.error("Erro ao excluir despesa:", error);
-                showMessage("Erro ao excluir a despesa.", true);
+                console.error("Erro ao deletar documento de despesa:", error);
+                showMessage("Erro ao deletar a despesa.", true);
             } finally {
                 hideLoading();
             }
         };
+        
+        // NOVO: Adiciona o listener para o formulário de relatório
+        function setupReportModal() {
+            const openBtn = document.getElementById('openReportModalBtn');
+            const closeBtn = document.getElementById('closeReportModalBtn');
+            const modal = document.getElementById('reportModal');
+            const reportForm = document.getElementById('reportForm');
+            const reportContainer = document.getElementById('reportContainer');
 
-        // Manipuladores de eventos
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializa o Firebase
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                setLogLevel('Debug');
-            } catch (error) {
-                console.error("Erro ao inicializar Firebase:", error);
-                showMessage("Erro ao carregar o aplicativo. Verifique a configuração do Firebase.", true);
+            if (!openBtn || !closeBtn || !modal || !reportForm || !reportContainer) {
+                console.error("Elementos do modal de relatório não encontrados.");
                 return;
             }
             
-            // NOVO: Adiciona um listener para a mudança de estado de autenticação
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    console.log("Usuário autenticado:", user.email);
-                    loginSection.classList.add('hidden');
-                    mainApp.classList.remove('hidden');
-                    if (!dataListenersInitialized) {
-                        initializeDataListeners();
-                    }
-                } else {
-                    console.log("Usuário deslogado.");
-                    loginSection.classList.remove('hidden');
-                    mainApp.classList.add('hidden');
-                }
-                isAuthReady = true;
+            openBtn.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                // Limpa o conteúdo e esconde o relatório anterior
+                reportContainer.classList.add('hidden');
             });
             
-            // NOVO: Manipulador de submissão do formulário de login com try/catch
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                showLoading();
-                const email = loginForm.email.value;
-                const password = loginForm.password.value;
-                try {
-                    await signInWithEmailAndPassword(auth, email, password);
-                    showMessage("Login realizado com sucesso!", false);
-                } catch (error) {
-                    console.error("Erro no login:", error);
-                    let message = "Erro no login. Verifique suas credenciais.";
-                    if (error.code === 'auth/user-not-found') {
-                        message = "Usuário não encontrado.";
-                    } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                        message = "Senha incorreta.";
-                    }
-                    showMessage(message, true);
-                } finally {
-                    hideLoading();
+            closeBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                // Destrói o gráfico ao fechar o modal para evitar memory leaks
+                if (activeChart) {
+                    activeChart.destroy();
+                    activeChart = null;
                 }
             });
 
-            // Lógica do botão de logout
-            logoutBtn.addEventListener('click', async () => {
-                try {
-                    await signOut(auth);
-                    showMessage("Você foi desconectado.", false);
-                } catch (error) {
-                    console.error("Erro ao fazer logout:", error);
-                    showMessage("Erro ao desconectar.", true);
-                }
-            });
-
-            // Lógica de mostrar/esconder senha
-            const togglePassword = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('password');
-            const eyeIconOpen = document.getElementById('eyeIconOpen');
-            const eyeIconClosed = document.getElementById('eyeIconClosed');
-            togglePassword.addEventListener('click', () => {
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-                eyeIconOpen.classList.toggle('hidden');
-                eyeIconClosed.classList.toggle('hidden');
-            });
-
-            // Manipulador de submissão do formulário de pagamento
-            paymentForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (!isAuthReady) {
-                    showMessage("Aguarde, autenticando...", true);
-                    return;
-                }
-                const unitNumber = paymentForm.unitNumber.value;
-                const unitType = paymentForm.unitType.value;
-                const paymentType = paymentForm.paymentType.value;
-                const paymentMonth = paymentForm.paymentMonth.value;
-                const paymentYear = parseInt(paymentForm.paymentYear.value);
-                const rateioPaid = paymentForm.rateioPaid.checked;
-
-                const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-
-                const paymentData = {
-                    unidade: unitNumber,
-                    tipoUnidade: unitType,
-                    tipoPagamento: paymentType,
-                    mes: paymentMonth,
-                    ano: paymentYear,
-                    valorReceita: valorReceita,
-                    valorRateio: valorRateio
-                };
-
-                addPayment(paymentData);
-                paymentForm.reset();
-            });
-
-            // Manipulador de submissão do formulário de despesa
-            expenseForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (!isAuthReady) {
-                    showMessage("Aguarde, autenticando...", true);
-                    return;
-                }
-                const expenseDescription = expenseForm.expenseDescription.value;
-                const expenseValue = parseFloat(expenseForm.expenseValue.value);
-                const expenseMonth = expenseForm.expenseMonth.value;
-                const expenseYear = parseInt(expenseForm.expenseYear.value);
-
-                const expenseData = {
-                    descricao: expenseDescription,
-                    valor: expenseValue,
-                    mes: expenseMonth,
-                    ano: expenseYear
-                };
-
-                addExpense(expenseData);
-                expenseForm.reset();
-            });
-            
-            // Manipulador do botão e formulário do relatório
-            const reportModal = document.getElementById('reportModal');
-            document.getElementById('openReportModalBtn').addEventListener('click', () => {
-                reportModal.classList.remove('hidden');
-            });
-            document.getElementById('closeReportModalBtn').addEventListener('click', () => {
-                reportModal.classList.add('hidden');
-            });
-            document.getElementById('reportForm').addEventListener('submit', (e) => {
+            reportForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 generateReport();
             });
-            
-            // Setar o ano atual nos formulários
-            const currentYear = new Date().getFullYear();
-            document.getElementById('paymentYear').value = currentYear;
-            document.getElementById('expenseYear').value = currentYear;
-            document.getElementById('startYear').value = currentYear;
-            document.getElementById('endYear').value = currentYear;
-        });
+        }
+        
+        // Função principal que inicializa o aplicativo
+        async function main() {
+            try {
+                setLogLevel('debug');
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
 
+                // Preenche os campos de ano com o ano atual
+                const currentYear = new Date().getFullYear();
+                document.getElementById('paymentYear').value = currentYear;
+                document.getElementById('expenseYear').value = currentYear;
+                document.getElementById('startYear').value = currentYear;
+                document.getElementById('endYear').value = currentYear;
+
+
+                // Autentica o usuário e, após o login, inicia a escuta em tempo real
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        isAuthReady = true;
+                        console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
+                        showLoading();
+
+                        // Listener para pagamentos
+                        const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+                        onSnapshot(paymentsCol, (snapshot) => {
+                            allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
+                            renderAllData(); // Chamada para renderizar
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações de pagamentos:", error);
+                            showMessage("Erro de sincronização com o banco de dados.", true);
+                            hideLoading();
+                        });
+
+                        // NOVO: Listener para despesas
+                        const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                        onSnapshot(expensesCol, (snapshot) => {
+                            allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
+                            renderAllData(); // Chamada para renderizar
+                        }, (error) => {
+                            console.error("Erro ao ouvir atualizações de despesas:", error);
+                            showMessage("Erro de sincronização com o banco de dados.", true);
+                            hideLoading();
+                        });
+
+                    } else {
+                        console.log("Usuário não autenticado. Iniciando o processo de login.");
+                        if (initialAuthToken) {
+                            try {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } catch (e) {
+                                console.error("Erro ao autenticar com token:", e);
+                                showMessage("Erro de autenticação. Verifique as configurações.", true);
+                            }
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    }
+                });
+
+                const paymentForm = document.getElementById('paymentForm');
+                if (paymentForm) {
+                    paymentForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        const unitNumber = document.getElementById('unitNumber').value;
+                        const unitType = document.getElementById('unitType').value;
+                        const paymentType = document.getElementById('paymentType').value;
+                        const paymentMonth = document.getElementById('paymentMonth').value;
+                        const paymentYear = parseInt(document.getElementById('paymentYear').value);
+                        const rateioPaid = document.getElementById('rateioPaid').checked;
+
+                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
+                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+
+                        const newPayment = {
+                            unidade: unitNumber,
+                            tipoUnidade: unitType,
+                            tipoPagamento: paymentType,
+                            mes: paymentMonth,
+                            ano: paymentYear,
+                            valorReceita: valorReceita,
+                            valorRateio: valorRateio,
+                            dataRegistro: new Date()
+                        };
+
+                        await addPayment(newPayment);
+
+                        paymentForm.reset();
+                        document.getElementById('paymentYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                }
+
+                const expenseForm = document.getElementById('expenseForm');
+                if (expenseForm) {
+                    expenseForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+
+                        const description = document.getElementById('expenseDescription').value;
+                        const value = parseFloat(document.getElementById('expenseValue').value);
+                        const month = document.getElementById('expenseMonth').value;
+                        const year = parseInt(document.getElementById('expenseYear').value);
+
+                        const newExpense = {
+                            descricao: description,
+                            valor: value,
+                            mes: month,
+                            ano: year,
+                            dataRegistro: new Date()
+                        };
+
+                        await addExpense(newExpense);
+
+                        expenseForm.reset();
+                        document.getElementById('expenseYear').value = new Date().getFullYear();
+                    });
+                } else {
+                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
+                }
+                
+                setupReportModal();
+
+            } catch (error) {
+                console.error("Erro na inicialização do Firebase:", error);
+                showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', main);
     </script>
 </body>
 </html>
+
