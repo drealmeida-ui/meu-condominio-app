@@ -462,10 +462,10 @@
     <!-- Firebase SDKs -->
     <script type="module">
         // Importa as dependências do Firebase
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
         const firebaseConfig = {
@@ -1214,6 +1214,9 @@
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); // Inicializa a autenticação
                 db = getFirestore(app);
+
+                // FORÇA O LOGOUT para garantir que o formulário de login apareça primeiro
+                await signOut(auth);
 
                 // Preenche os campos de ano com o ano atual
                 const currentYear = new Date().getFullYear();
