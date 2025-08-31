@@ -345,6 +345,56 @@
             </form>
         </div>
 
+        <!-- Formulário para Registrar Receita Extra -->
+        <div class="no-print bg-green-50 p-6 rounded-xl border-2 border-green-200 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Receita Extra</h2>
+            <form id="extraRevenueForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <!-- Campo de Descrição da Receita -->
+                <div class="md:col-span-2 lg:col-span-2">
+                    <label for="extraRevenueDescription" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Descrição</label>
+                    <input type="text" id="extraRevenueDescription" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                </div>
+
+                <!-- Campo de Valor da Receita -->
+                <div>
+                    <label for="extraRevenueValue" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Valor</label>
+                    <input type="number" id="extraRevenueValue" step="0.01" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                </div>
+                
+                <!-- Campo de Mês da Receita -->
+                <div>
+                    <label for="extraRevenueMonth" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Mês</label>
+                    <select id="extraRevenueMonth" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                        <option value="Janeiro">Janeiro</option>
+                        <option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option>
+                        <option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option>
+                        <option value="Agosto">Agosto</option>
+                        <option value="Setembro">Setembro</option>
+                        <option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option>
+                        <option value="Dezembro">Dezembro</option>
+                    </select>
+                </div>
+
+                <!-- Campo de Ano da Receita -->
+                <div>
+                    <label for="extraRevenueYear" class="block text-sm font-medium text-gray-700 font-semibold mb-1">Ano</label>
+                    <input type="number" id="extraRevenueYear" required class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                </div>
+
+                <div class="lg:col-span-4">
+                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors shadow-lg transform hover:scale-105">
+                        Registrar Receita Extra
+                    </button>
+                </div>
+            </form>
+        </div>
+
+
         <!-- Formulário para Registrar Despesas -->
         <div class="no-print bg-red-50 p-6 rounded-xl border-2 border-red-200 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Despesa</h2>
@@ -825,6 +875,13 @@
 
             const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
             monthData.payments.sort((a, b) => {
+                // Mantém as receitas extras no final da lista, ordenadas por data
+                if (a.tipo === 'Receita Extra' && b.tipo !== 'Receita Extra') return 1;
+                if (a.tipo !== 'Receita Extra' && b.tipo === 'Receita Extra') return -1;
+                if (a.tipo === 'Receita Extra' && b.tipo === 'Receita Extra') {
+                    return a.dataRegistro.seconds > b.dataRegistro.seconds ? 1 : -1;
+                }
+
                 const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
                 const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
                 
@@ -892,17 +949,30 @@
                 monthData.payments.forEach(payment => {
                     const row = document.createElement('tr');
                     row.className = "hover:bg-gray-50 transition-colors";
-                    const receita = formatCurrency(payment.valorReceita);
-                    const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
-                    const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
-                    row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
-                    `;
+                    
+                    if (payment.tipo === 'Receita Extra') {
+                        // Linha customizada para Receita Extra
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.descricao}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 italic" colspan="2">Receita Extra</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">${formatCurrency(payment.valorReceita)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">-</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
+                        `;
+                    } else {
+                        // Linha padrão para pagamentos de unidade
+                        const receita = formatCurrency(payment.valorReceita);
+                        const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+                        const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
+                        `;
+                    }
                     paymentTableBody.appendChild(row);
                 });
             } else {
@@ -1178,27 +1248,27 @@
                 showLoading();
                 const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
 
-                // Verifica se já existe um pagamento para a mesma unidade, mês e ano
-                const q = query(paymentsCol,
-                    where("unidade", "==", paymentData.unidade),
-                    where("tipoUnidade", "==", paymentData.tipoUnidade),
-                    where("mes", "==", paymentData.mes),
-                    where("ano", "==", paymentData.ano)
-                );
-
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${unitTypeDisplay[paymentData.tipoUnidade]} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
-                    return;
+                // Apenas verifica duplicados para pagamentos de unidade, não para receita extra
+                if (paymentData.tipo !== 'Receita Extra') {
+                    const q = query(paymentsCol,
+                        where("unidade", "==", paymentData.unidade),
+                        where("tipoUnidade", "==", paymentData.tipoUnidade),
+                        where("mes", "==", paymentData.mes),
+                        where("ano", "==", paymentData.ano)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    if (!querySnapshot.empty) {
+                        showMessage(`Pagamento para a unidade ${paymentData.unidade} do tipo ${unitTypeDisplay[paymentData.tipoUnidade]} no mês de ${paymentData.mes} de ${paymentData.ano} já foi registrado.`, true);
+                        return;
+                    }
                 }
 
                 await addDoc(paymentsCol, paymentData);
                 console.log("Documento de pagamento adicionado com sucesso.");
-                showMessage("Pagamento registrado com sucesso!");
+                showMessage("Registro salvo com sucesso!");
             } catch (error) {
                 console.error("Erro ao adicionar documento de pagamento:", error);
-                showMessage("Erro ao registrar o pagamento. Tente novamente.", true);
+                showMessage("Erro ao registrar. Tente novamente.", true);
             } finally {
                 hideLoading();
             }
@@ -1295,6 +1365,7 @@
                 const currentYear = new Date().getFullYear();
                 document.getElementById('paymentYear').value = currentYear;
                 document.getElementById('expenseYear').value = currentYear;
+                document.getElementById('extraRevenueYear').value = currentYear;
                 document.getElementById('startYear').value = currentYear;
                 document.getElementById('endYear').value = currentYear;
                 
@@ -1458,15 +1529,16 @@
                         const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
                         
-                        const valorReceita = priceSettings[unitType.toLowerCase()].normal;
+                        const valorBase = priceSettings[unitType.toLowerCase()][paymentType.toLowerCase() === 'a_vista' ? 'a_vista' : 'normal'];
                         const valorRateio = rateioPaid ? priceSettings.rateio : 0;
+
                         const newPayment = {
                             unidade: unitNumber,
                             tipoUnidade: unitType,
                             tipoPagamento: paymentType,
                             mes: paymentMonth,
                             ano: paymentYear,
-                            valorReceita: valorReceita,
+                            valorReceita: valorBase,
                             valorRateio: valorRateio,
                             dataRegistro: new Date()
                         };
@@ -1476,6 +1548,33 @@
                     });
                 } else {
                     console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
+                }
+
+                const extraRevenueForm = document.getElementById('extraRevenueForm');
+                if (extraRevenueForm) {
+                    extraRevenueForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const description = document.getElementById('extraRevenueDescription').value;
+                        const value = parseFloat(document.getElementById('extraRevenueValue').value);
+                        const month = document.getElementById('extraRevenueMonth').value;
+                        const year = parseInt(document.getElementById('extraRevenueYear').value);
+
+                        const newExtraRevenue = {
+                            descricao: description,
+                            valorReceita: value,
+                            mes: month,
+                            ano: year,
+                            tipo: 'Receita Extra', // Identificador
+                            dataRegistro: new Date(),
+                            unidade: 'N/A',
+                            tipoUnidade: 'N/A',
+                            tipoPagamento: 'N/A',
+                            valorRateio: 0
+                        };
+                        await addPayment(newExtraRevenue); // Reutiliza a função addPayment
+                        extraRevenueForm.reset();
+                        document.getElementById('extraRevenueYear').value = new Date().getFullYear();
+                    });
                 }
 
                 const expenseForm = document.getElementById('expenseForm');
