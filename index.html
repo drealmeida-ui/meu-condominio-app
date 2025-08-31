@@ -157,6 +157,10 @@
     <!-- Seção de Login - Visível por padrão -->
     <div id="login-section" class="flex items-center justify-center min-h-screen bg-gray-100">
         <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+            <!-- NOVO: Logo na página de login -->
+            <!-- Substitua esta URL pela sua própria URL da logo. -->
+            <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-48 mx-auto mb-4 border-2 border-blue-200 rounded-lg" />
+            
             <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Acesso Restrito</h2>
             <form id="loginForm">
                 <div class="mb-4">
@@ -178,7 +182,6 @@
                         <svg id="eyeIconClosed" class="h-5 w-5 text-gray-500 hover:text-gray-700 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 1.455 0 2.894.27 4.256.774M10.5 13.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.957 16.327A10.05 10.05 0 0012 5C7.522 5 3.732 7.943 2.458 12c.983 3.12 3.284 5.343 5.922 6.577"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6"></path>
                         </svg>
                     </div>
@@ -208,7 +211,10 @@
     <!-- Container Principal do Aplicativo - Escondido por padrão -->
     <div id="main-app" class="container-card relative hidden">
         <div class="flex items-center mb-4 no-print">
-            <div class="flex-1 text-center">
+            <!-- NOVO: Container para logo e título centralizados juntos -->
+            <div class="flex-1 flex items-center justify-center space-x-4">
+                <!-- Substitua esta URL pela sua própria URL da logo. -->
+                <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24 border-2 border-blue-200 rounded-lg" />
                 <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
                     Condomínio Pirâmide
                 </h1>
@@ -1112,276 +1118,3 @@
             } finally {
                 hideLoading();
             }
-        }
-
-        // Função para registrar uma nova despesa no banco de dados
-        async function addExpense(expenseData) {
-            try {
-                showLoading();
-                const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-                await addDoc(expensesCol, expenseData);
-                console.log("Documento de despesa adicionado com sucesso.");
-                showMessage("Despesa registrada com sucesso!");
-            } catch (error) {
-                console.error("Erro ao adicionar documento de despesa:", error);
-                showMessage("Erro ao registrar a despesa. Tente novamente.", true);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // Função para deletar um pagamento
-        window.deletePayment = async (docId) => {
-            try {
-                showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, docId));
-                console.log("Documento de pagamento removido com sucesso.");
-                showMessage("Pagamento removido com sucesso!");
-            } catch (error) {
-                console.error("Erro ao deletar documento de pagamento:", error);
-                showMessage("Erro ao deletar o pagamento.", true);
-            } finally {
-                hideLoading();
-            }
-        };
-
-        // Função para deletar uma despesa
-        window.deleteExpense = async (docId) => {
-            try {
-                showLoading();
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, docId));
-                console.log("Documento de despesa removido com sucesso.");
-                showMessage("Despesa removida com sucesso!");
-            } catch (error) {
-                console.error("Erro ao deletar documento de despesa:", error);
-                showMessage("Erro ao deletar a despesa.", true);
-            } finally {
-                hideLoading();
-            }
-        };
-        
-        // NOVO: Adiciona o listener para o formulário de relatório
-        function setupReportModal() {
-            const openBtn = document.getElementById('openReportModalBtn');
-            const closeBtn = document.getElementById('closeReportModalBtn');
-            const modal = document.getElementById('reportModal');
-            const reportForm = document.getElementById('reportForm');
-            const reportContainer = document.getElementById('reportContainer');
-
-            if (!openBtn || !closeBtn || !modal || !reportForm || !reportContainer) {
-                console.error("Elementos do modal de relatório não encontrados.");
-                return;
-            }
-            
-            openBtn.addEventListener('click', () => {
-                modal.classList.remove('hidden');
-                // Limpa o conteúdo e esconde o relatório anterior
-                reportContainer.classList.add('hidden');
-            });
-            
-            closeBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                // Destrói o gráfico ao fechar o modal para evitar memory leaks
-                if (activeChart) {
-                    activeChart.destroy();
-                    activeChart = null;
-                }
-            });
-
-            reportForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                generateReport();
-            });
-        }
-        
-        // NOVO: Função para inicializar os listeners do Firestore somente após o login
-        function initializeDataListeners() {
-            if (dataListenersInitialized) {
-                console.log("Listeners de dados já inicializados. Ignorando...");
-                return;
-            }
-            
-            console.log("Inicializando os listeners de dados do Firestore.");
-
-            // Listener para pagamentos
-            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-            onSnapshot(paymentsCol, (snapshot) => {
-                allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
-                renderAllData();
-            }, (error) => {
-                console.error("Erro ao ouvir atualizações de pagamentos:", error);
-                showMessage("Erro de sincronização com o banco de dados.", true);
-                hideLoading();
-            });
-
-            // Listener para despesas
-            const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-            onSnapshot(expensesCol, (snapshot) => {
-                allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
-                renderAllData();
-            }, (error) => {
-                console.error("Erro ao ouvir atualizações de despesas:", error);
-                showMessage("Erro de sincronização com o banco de dados.", true);
-                hideLoading();
-            });
-
-            dataListenersInitialized = true;
-        }
-
-        // Função principal que inicializa o aplicativo
-        function main() {
-            try {
-                setLogLevel('debug');
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                // NOVO: Lógica para o campo de senha
-                const passwordInput = document.getElementById('password');
-                const togglePassword = document.getElementById('togglePassword');
-                const eyeIconOpen = document.getElementById('eyeIconOpen');
-                const eyeIconClosed = document.getElementById('eyeIconClosed');
-                
-                if (passwordInput && togglePassword && eyeIconOpen && eyeIconClosed) {
-                    togglePassword.addEventListener('click', () => {
-                        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                        passwordInput.setAttribute('type', type);
-                        
-                        // Alterna a visibilidade dos ícones
-                        eyeIconOpen.classList.toggle('hidden');
-                        eyeIconClosed.classList.toggle('hidden');
-                    });
-                } else {
-                    console.error("Elementos do campo de senha não encontrados.");
-                }
-
-                // Preenche os campos de ano com o ano atual
-                const currentYear = new Date().getFullYear();
-                document.getElementById('paymentYear').value = currentYear;
-                document.getElementById('expenseYear').value = currentYear;
-                document.getElementById('startYear').value = currentYear;
-                document.getElementById('endYear').value = currentYear;
-
-                // Listener para o formulário de login
-                if (loginForm) {
-                    loginForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const email = document.getElementById('email').value;
-                        const password = document.getElementById('password').value;
-                        loginMessage.innerText = "";
-                        showLoading();
-
-                        try {
-                            // Tenta autenticar com as credenciais fornecidas
-                            await signInWithEmailAndPassword(auth, email, password);
-                            
-                            // Se o login for bem-sucedido, esconde a tela de login e mostra o app
-                            console.log("Login bem-sucedido.");
-                            loginSection.classList.add('hidden');
-                            mainApp.classList.remove('hidden');
-                            initializeDataListeners(); // Agora inicializamos os listeners de dados AQUI
-                            hideLoading();
-
-                        } catch (error) {
-                            console.error("Erro de login:", error);
-                            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
-                            let errorMessage = "Erro ao fazer login. Por favor, tente novamente.";
-                            switch (error.code) {
-                                case 'auth/wrong-password':
-                                case 'auth/user-not-found':
-                                case 'auth/invalid-credential':
-                                    errorMessage = "E-mail ou senha incorretos.";
-                                    break;
-                                default:
-                                    errorMessage = "Erro desconhecido. Por favor, verifique sua conexão.";
-                                    break;
-                            }
-                            loginMessage.innerText = errorMessage;
-                            hideLoading();
-                        }
-                    });
-                } else {
-                    console.error("Elemento loginForm não encontrado.");
-                }
-
-                // Listener para o botão de sair
-                if (logoutBtn) {
-                    logoutBtn.addEventListener('click', async () => {
-                        try {
-                            await signOut(auth); // Desconecta do Firebase
-                            loginSection.classList.remove('hidden');
-                            mainApp.classList.add('hidden');
-                            loginMessage.innerText = "";
-                            showMessage("Você saiu da sua conta.");
-                        } catch (error) {
-                            console.error("Erro ao sair:", error);
-                            showMessage("Erro ao sair. Tente novamente.", true);
-                        }
-                    });
-                }
-
-                if (paymentForm) {
-                    paymentForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const unitNumber = document.getElementById('unitNumber').value;
-                        const unitType = document.getElementById('unitType').value;
-                        const paymentType = document.getElementById('paymentType').value;
-                        const paymentMonth = document.getElementById('paymentMonth').value;
-                        const paymentYear = parseInt(document.getElementById('paymentYear').value);
-                        const rateioPaid = document.getElementById('rateioPaid').checked;
-                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-                        const newPayment = {
-                            unidade: unitNumber,
-                            tipoUnidade: unitType,
-                            tipoPagamento: paymentType,
-                            mes: paymentMonth,
-                            ano: paymentYear,
-                            valorReceita: valorReceita,
-                            valorRateio: valorRateio,
-                            dataRegistro: new Date()
-                        };
-                        await addPayment(newPayment);
-                        paymentForm.reset();
-                        document.getElementById('paymentYear').value = new Date().getFullYear();
-                    });
-                } else {
-                    console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
-                }
-
-                if (expenseForm) {
-                    expenseForm.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const description = document.getElementById('expenseDescription').value;
-                        const value = parseFloat(document.getElementById('expenseValue').value);
-                        const month = document.getElementById('expenseMonth').value;
-                        const year = parseInt(document.getElementById('expenseYear').value);
-                        const newExpense = {
-                            descricao: description,
-                            valor: value,
-                            mes: month,
-                            ano: year,
-                            dataRegistro: new Date()
-                        };
-                        await addExpense(newExpense);
-                        expenseForm.reset();
-                        document.getElementById('expenseYear').value = new Date().getFullYear();
-                    });
-                } else {
-                    console.error("Elemento expenseForm não encontrado. O listener não foi anexado.");
-                }
-                
-                setupReportModal();
-
-            } catch (error) {
-                console.error("Erro na inicialização do Firebase:", error);
-                showMessage("Erro ao conectar com o banco de dados. Tente novamente mais tarde.", true);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', main);
-    </script>
-</body>
-</html>
