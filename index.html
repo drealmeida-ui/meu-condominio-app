@@ -42,6 +42,29 @@
             background-color: #3182ce; /* a slightly darker blue */
         }
 
+        .year-tab-button {
+            transition-property: background-color, border-color, color;
+            transition-duration: 300ms;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: #d1d5db; /* gray */
+            color: #374151;
+            border: 1px solid #9ca3af;
+        }
+
+        .year-tab-button.active {
+            background-color: #4299e1;
+            color: white;
+            border-color: #4299e1;
+        }
+
+        .year-tab-button:not(.active):hover {
+            background-color: #e5e7eb;
+        }
+        .year-tab-button.active:hover {
+            background-color: #3182ce;
+        }
+
+
         .modal {
             display: flex;
             align-items: center;
@@ -443,7 +466,13 @@
 
             <p id="noDataMessage" class="text-center text-gray-500 p-6 hidden">Nenhum dado registrado ainda.</p>
 
-            <div id="tabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200">
+            <!-- Contêiner para as abas de ano -->
+            <div id="yearTabsContainer" class="flex flex-wrap p-4 bg-gray-100 border-b border-gray-200 gap-2">
+                <!-- Abas dos anos serão inseridas aqui pelo JS -->
+            </div>
+
+            <!-- Contêiner para as abas de mês -->
+            <div id="monthTabsContainer" class="p-4 bg-gray-100 border-b border-gray-200 hidden">
                 <!-- Abas dos meses serão inseridas aqui pelo JS -->
             </div>
 
@@ -559,7 +588,8 @@
 
         let db;
         let isAuthReady = false;
-        let currentActiveTab = ''; 
+        let currentActiveMonthTab = ''; 
+        let currentActiveYear = '';
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
@@ -633,297 +663,293 @@
         // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
             const noDataMessage = document.getElementById('noDataMessage');
-            const tabsContainer = document.getElementById('tabsContainer');
+            const yearTabsContainer = document.getElementById('yearTabsContainer');
+            const monthTabsContainer = document.getElementById('monthTabsContainer');
             const tableContainer = document.getElementById('financialTableContainer');
 
-            if (!noDataMessage || !tabsContainer || !tableContainer) {
+            if (!noDataMessage || !yearTabsContainer || !monthTabsContainer || !tableContainer) {
                 console.error("Erro fatal: Elementos da UI não encontrados.");
                 showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
                 return;
             }
 
-            // Agrupar pagamentos e despesas por mês e ano
+            // Agrupar por ano, depois por mês
             const allData = [...payments, ...expenses];
-            const groupedData = allData.reduce((acc, item) => {
-                const monthYear = `${item.mes} de ${item.ano}`;
-                if (!acc[monthYear]) {
-                    acc[monthYear] = { payments: [], expenses: [] };
+            const groupedByYear = allData.reduce((acc, item) => {
+                const year = item.ano;
+                if (!acc[year]) {
+                    acc[year] = {};
+                }
+                const monthYear = `${item.mes} de ${year}`;
+                if (!acc[year][monthYear]) {
+                    acc[year][monthYear] = { payments: [], expenses: [] };
                 }
                 if (item.valorReceita !== undefined) {
-                    acc[monthYear].payments.push(item);
+                    acc[year][monthYear].payments.push(item);
                 } else {
-                    acc[monthYear].expenses.push(item);
+                    acc[year][monthYear].expenses.push(item);
                 }
                 return acc;
             }, {});
 
-            // Ordenar os meses do mais recente para o mais antigo
-            const sortedMonths = Object.keys(groupedData).sort((a, b) => {
-                const [monthA, yearA] = a.split(' de ');
-                const [monthB, yearB] = b.split(' de ');
-
-                if (parseInt(yearA) !== parseInt(yearB)) {
-                    return parseInt(yearB) - parseInt(yearA);
-                }
-
-                return MESES.indexOf(b.split(' ')[0]) - MESES.indexOf(a.split(' ')[0]);
-            });
-
-            // Limpa o conteúdo antes de renderizar
-            tabsContainer.innerHTML = '';
+            const sortedYears = Object.keys(groupedByYear).sort((a, b) => b - a);
+            yearTabsContainer.innerHTML = '';
+            monthTabsContainer.innerHTML = '';
             tableContainer.innerHTML = '';
 
             if (payments.length === 0 && expenses.length === 0) {
                 noDataMessage.classList.remove('hidden');
+                yearTabsContainer.classList.add('hidden');
+                monthTabsContainer.classList.add('hidden');
                 return;
             } else {
                 noDataMessage.classList.add('hidden');
+                yearTabsContainer.classList.remove('hidden');
+                monthTabsContainer.classList.remove('hidden');
             }
 
-            // Cria as abas e o conteúdo da tabela
-            sortedMonths.forEach(monthYear => {
-                const monthData = groupedData[monthYear];
-                let totalReceitaMensal = 0;
-                let totalRateioMensal = 0;
-                let totalDespesaMensal = 0;
-                
-                // Calcular inadimplentes e totais de receita
-                const delinquentCounts = {
-                    "Apartamento": TOTAL_UNITS["Apartamento"],
-                    "Kitnet": TOTAL_UNITS["Kitnet"],
-                    "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
-                };
-                
-                // Decrementa o contador para cada pagamento encontrado
-                monthData.payments.forEach(p => {
-                    delinquentCounts[p.tipoUnidade]--;
-                    totalReceitaMensal += p.valorReceita;
-                    totalRateioMensal += p.valorRateio;
+            let firstYearToActivate = null;
+            let firstMonthToActivate = null;
+
+            // Renderiza as abas dos anos
+            sortedYears.forEach(year => {
+                const yearButton = document.createElement('button');
+                yearButton.className = "year-tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
+                yearButton.textContent = year;
+                yearButton.setAttribute('data-year', year);
+                yearTabsContainer.appendChild(yearButton);
+
+                // Listener para a aba de ano
+                yearButton.addEventListener('click', () => {
+                    activateYear(year, groupedByYear);
                 });
 
-                // Calcula o total de despesas
-                monthData.expenses.forEach(e => {
-                    totalDespesaMensal += e.valor;
-                });
-                
-                // Ordenar os pagamentos de forma crescente por tipo e número da unidade
-                const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
-                monthData.payments.sort((a, b) => {
-                    const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
-                    const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
-                    
-                    if (typeIndexA !== typeIndexB) {
-                        return typeIndexA - typeIndexB;
-                    }
-
-                    // Extrai apenas os números para a ordenação
-                    const numA = parseInt(a.unidade.replace(/\D/g, ''));
-                    const numB = parseInt(b.unidade.replace(/\D/g, ''));
-                    return numA - numB;
+                const sortedMonths = Object.keys(groupedByYear[year]).sort((a, b) => {
+                    const monthIndexA = MESES.indexOf(a.split(' ')[0]);
+                    const monthIndexB = MESES.indexOf(b.split(' ')[0]);
+                    return monthIndexB - monthIndexA;
                 });
 
-                // Cria o botão da aba
-                const tabButton = document.createElement('button');
-                tabButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
-                tabButton.textContent = monthYear;
-                const tabId = `tab-${monthYear.replace(/\s+/g, '-')}`;
-                tabButton.setAttribute('data-target', tabId);
-                tabsContainer.appendChild(tabButton);
+                // Renderiza as abas dos meses para cada ano
+                const yearMonthContainer = document.createElement('div');
+                yearMonthContainer.id = `months-${year}`;
+                yearMonthContainer.className = "flex flex-wrap gap-2 hidden";
 
-                // Adiciona listener para a nova aba
-                tabButton.addEventListener('click', (e) => {
-                    const targetId = e.target.getAttribute('data-target');
-                    if (currentActiveTab && document.getElementById(currentActiveTab)) {
-                        document.getElementById(currentActiveTab).classList.add('hidden');
-                    }
-                    tabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                    document.getElementById(targetId).classList.remove('hidden');
-                    e.target.classList.add('active');
-                    currentActiveTab = targetId; // Atualiza a aba ativa
-                    renderChartForTab(currentActiveTab);
-                });
+                sortedMonths.forEach(monthYear => {
+                    const monthButton = document.createElement('button');
+                    monthButton.className = "tab-button px-4 py-2 text-sm font-medium border rounded-lg transition-colors";
+                    monthButton.textContent = monthYear.split(' ')[0]; // Apenas o nome do mês
+                    const tabId = `tab-${monthYear.replace(/\s+/g, '-')}`;
+                    monthButton.setAttribute('data-target', tabId);
+                    yearMonthContainer.appendChild(monthButton);
 
-                // Cria o contêiner da tabela para esta aba
-                const tableContent = document.createElement('div');
-                tableContent.id = tabId;
-                tableContent.className = "tab-content hidden";
+                    // Adiciona o conteúdo da tabela para cada mês
+                    const tableContent = createMonthContent(groupedByYear[year][monthYear], tabId);
+                    tableContainer.appendChild(tableContent);
 
-                // Adiciona o painel de resumo financeiro
-                const totalsDiv = document.createElement('div');
-                totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
-                const monthlyBalance = totalReceitaMensal + totalRateioMensal - totalDespesaMensal;
-                const balanceColor = monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600';
-
-                totalsDiv.innerHTML = `
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500">Receita do Mês</p>
-                        <p class="text-xl font-bold text-blue-600">${formatCurrency(totalReceitaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p>
-                        <p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p>
-                        <p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p>
-                        <p class="text-xl font-bold ${balanceColor}">${formatCurrency(monthlyBalance)}</p>
-                    </div>
-                `;
-                tableContent.appendChild(totalsDiv);
-                
-                // Adiciona o painel de inadimplentes dentro do painel do mês
-                const delinquentDiv = document.createElement('div');
-                delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
-                delinquentDiv.innerHTML = `
-                    <div class="mb-2 sm:mb-0">
-                        <p class="text-sm font-semibold text-gray-600">Inadimplentes</p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p>
-                    </div>
-                `;
-                tableContent.appendChild(delinquentDiv);
-
-                // Adiciona o canvas para o gráfico de barras
-                const chartContainer = document.createElement('div');
-                chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6 max-w-sm mx-auto";
-                const chartCanvas = document.createElement('canvas');
-                chartCanvas.id = `chart-${monthYear.replace(/\s+/g, '-')}`;
-                chartContainer.appendChild(chartCanvas);
-                tableContent.appendChild(chartContainer);
-
-                // --- Tabela de Pagamentos ---
-                const paymentTableTitle = document.createElement('h3');
-                paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
-                paymentTableTitle.textContent = "Pagamentos Recebidos";
-                tableContent.appendChild(paymentTableTitle);
-
-                const paymentsTable = document.createElement('table');
-                paymentsTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mb-8";
-                paymentsTable.innerHTML = `
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Taxa</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rateio</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-200">
-                    </tbody>
-                `;
-
-                // Adiciona as linhas da tabela de pagamentos
-                const paymentTableBody = paymentsTable.querySelector('tbody');
-                if (monthData.payments.length > 0) {
-                    monthData.payments.forEach(payment => {
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition-colors";
-
-                        const receita = formatCurrency(payment.valorReceita);
-                        const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
-                        const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
-
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
-                        paymentTableBody.appendChild(row);
+                    // Adiciona o listener para a aba de mês
+                    monthButton.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        activateMonth(tabId, year);
                     });
-                } else {
-                    paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
+                });
+
+                monthTabsContainer.appendChild(yearMonthContainer);
+                
+                if (firstYearToActivate === null) {
+                    firstYearToActivate = year;
+                    firstMonthToActivate = sortedMonths[0];
                 }
-
-                tableContent.appendChild(paymentsTable);
-
-                // --- Tabela de Despesas ---
-                const expenseTableTitle = document.createElement('h3');
-                expenseTableTitle.className = "text-xl font-bold text-gray-800 my-4";
-                expenseTableTitle.textContent = "Despesas Registradas";
-                tableContent.appendChild(expenseTableTitle);
-
-                const expensesTable = document.createElement('table');
-                expensesTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
-                expensesTable.innerHTML = `
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                    </tbody>
-                `;
-
-                // Adiciona as linhas da tabela de despesas
-                const expenseTableBody = expensesTable.querySelector('tbody');
-                if (monthData.expenses.length > 0) {
-                    monthData.expenses.forEach(expense => {
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-gray-50 transition-colors";
-                        const valor = formatCurrency(expense.valor);
-
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${valor}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
-                        expenseTableBody.appendChild(row);
-                    });
-                } else {
-                    expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
-                }
-                tableContent.appendChild(expensesTable);
-                tableContainer.appendChild(tableContent);
             });
 
-            // Ativa a aba salva, ou a primeira se não houver uma salva
-            const tabToActivate = sortedMonths.find(m => `tab-${m.replace(/\s+/g, '-')}` === currentActiveTab) || sortedMonths[0];
-            if (tabToActivate) {
-                const tabButtonToActivate = tabsContainer.querySelector(`[data-target="tab-${tabToActivate.replace(/\s+/g, '-')}"`);
-                if (tabButtonToActivate) {
-                    tabButtonToActivate.classList.add('active');
-                    const targetId = tabButtonToActivate.getAttribute('data-target');
-                    document.getElementById(targetId).classList.remove('hidden');
-                    currentActiveTab = targetId; // Certifica que a variável está atualizada
-                    renderChartForTab(currentActiveTab);
-                }
-            } else {
-                currentActiveTab = ''; // Reseta se não houver dados
+            // Ativa o ano e o mês mais recentes
+            if (firstYearToActivate && firstMonthToActivate) {
+                activateYear(firstYearToActivate, groupedByYear);
+                activateMonth(`tab-${firstMonthToActivate.replace(/\s+/g, '-')}`, firstYearToActivate);
             }
+        }
+        
+        // Ativa a aba de um ano
+        function activateYear(year, groupedByYear) {
+            document.querySelectorAll('.year-tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-year="${year}"]`).classList.add('active');
+            
+            document.querySelectorAll('#monthTabsContainer > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById(`months-${year}`).classList.remove('hidden');
+
+            currentActiveYear = year;
+            
+            // Ativa o mês mais recente do novo ano
+            const sortedMonths = Object.keys(groupedByYear[year]).sort((a, b) => {
+                const monthIndexA = MESES.indexOf(a.split(' ')[0]);
+                const monthIndexB = MESES.indexOf(b.split(' ')[0]);
+                return monthIndexB - monthIndexA;
+            });
+            if (sortedMonths.length > 0) {
+                activateMonth(`tab-${sortedMonths[0].replace(/\s+/g, '-')}`, year);
+            }
+        }
+
+        // Ativa a aba de um mês
+        function activateMonth(tabId, year) {
+            document.querySelectorAll(`#months-${year} .tab-button`).forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            currentActiveMonthTab = tabId;
+            renderChartForTab(tabId);
+        }
+
+        // Função auxiliar para criar o conteúdo de uma tabela de mês
+        function createMonthContent(monthData, tabId) {
+            let totalReceitaMensal = 0;
+            let totalRateioMensal = 0;
+            let totalDespesaMensal = 0;
+
+            const delinquentCounts = {
+                "Apartamento": TOTAL_UNITS["Apartamento"],
+                "Kitnet": TOTAL_UNITS["Kitnet"],
+                "Sala Comercial": TOTAL_UNITS["Sala Comercial"]
+            };
+
+            monthData.payments.forEach(p => {
+                delinquentCounts[p.tipoUnidade]--;
+                totalReceitaMensal += p.valorReceita;
+                totalRateioMensal += p.valorRateio;
+            });
+
+            monthData.expenses.forEach(e => {
+                totalDespesaMensal += e.valor;
+            });
+
+            const typeOrder = ["Apartamento", "Kitnet", "Sala Comercial"];
+            monthData.payments.sort((a, b) => {
+                const typeIndexA = typeOrder.indexOf(a.tipoUnidade);
+                const typeIndexB = typeOrder.indexOf(b.tipoUnidade);
+                
+                if (typeIndexA !== typeIndexB) {
+                    return typeIndexA - typeIndexB;
+                }
+
+                const numA = parseInt(a.unidade.replace(/\D/g, ''));
+                const numB = parseInt(b.unidade.replace(/\D/g, ''));
+                return numA - numB;
+            });
+            
+            const tableContent = document.createElement('div');
+            tableContent.id = tabId;
+            tableContent.className = "tab-content hidden";
+            
+            const monthlyBalance = totalReceitaMensal + totalRateioMensal - totalDespesaMensal;
+            const balanceColor = monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600';
+
+            const totalsDiv = document.createElement('div');
+            totalsDiv.className = "bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200 text-center flex flex-col sm:flex-row justify-around";
+            totalsDiv.innerHTML = `
+                <div><p class="text-sm font-semibold text-gray-500">Receita do Mês</p><p class="text-xl font-bold text-blue-600">${formatCurrency(totalReceitaMensal)}</p></div>
+                <div><p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Rateio do Mês</p><p class="text-xl font-bold text-purple-600">${formatCurrency(totalRateioMensal)}</p></div>
+                <div><p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Despesa do Mês</p><p class="text-xl font-bold text-red-600">${formatCurrency(totalDespesaMensal)}</p></div>
+                <div><p class="text-sm font-semibold text-gray-500 sm:mt-0 mt-2">Balanço Mensal</p><p class="text-xl font-bold ${balanceColor}">${formatCurrency(monthlyBalance)}</p></div>
+            `;
+            tableContent.appendChild(totalsDiv);
+
+            const delinquentDiv = document.createElement('div');
+            delinquentDiv.className = "bg-red-50 p-4 rounded-xl border border-red-200 text-center flex flex-col sm:flex-row justify-around mb-4";
+            delinquentDiv.innerHTML = `
+                <div class="mb-2 sm:mb-0"><p class="text-sm font-semibold text-gray-600">Inadimplentes</p></div>
+                <div><p class="text-sm font-semibold text-gray-600">Aptos: <span class="text-red-700 font-bold">${delinquentCounts["Apartamento"]}</span></p></div>
+                <div><p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Kitnets: <span class="text-red-700 font-bold">${delinquentCounts["Kitnet"]}</span></p></div>
+                <div><p class="text-sm font-semibold text-gray-600 sm:mt-0 mt-2">Salas: <span class="text-red-700 font-bold">${delinquentCounts["Sala Comercial"]}</span></p></div>
+            `;
+            tableContent.appendChild(delinquentDiv);
+
+            const chartContainer = document.createElement('div');
+            chartContainer.className = "p-4 bg-white rounded-lg shadow-inner mb-6 max-w-sm mx-auto";
+            const chartCanvas = document.createElement('canvas');
+            chartCanvas.id = `chart-${tabId}`;
+            chartContainer.appendChild(chartCanvas);
+            tableContent.appendChild(chartContainer);
+
+            // Tabela de Pagamentos
+            const paymentTableTitle = document.createElement('h3');
+            paymentTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+            paymentTableTitle.textContent = "Pagamentos Recebidos";
+            tableContent.appendChild(paymentTableTitle);
+
+            const paymentsTable = document.createElement('table');
+            paymentsTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden mb-8";
+            paymentsTable.innerHTML = `
+                <thead class="bg-gray-50">
+                    <tr><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unidade</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pagamento</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Taxa</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Rateio</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th></tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-200">
+                </tbody>
+            `;
+
+            const paymentTableBody = paymentsTable.querySelector('tbody');
+            if (monthData.payments.length > 0) {
+                monthData.payments.forEach(payment => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-50 transition-colors";
+                    const receita = formatCurrency(payment.valorReceita);
+                    const rateio = payment.valorRateio > 0 ? formatCurrency(payment.valorRateio) : 'Não';
+                    const tipoUnidadeDisplay = unitTypeDisplay[payment.tipoUnidade];
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.unidade}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tipoUnidadeDisplay}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${payment.tipoPagamento === 'A_Vista' ? 'Com Desconto' : 'Normal'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${receita}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-semibold">${rateio}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deletePayment('${payment.id}')" class="text-red-500 hover:text-red-700 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
+                    `;
+                    paymentTableBody.appendChild(row);
+                });
+            } else {
+                paymentTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum pagamento registrado neste mês.</td></tr>`;
+            }
+            tableContent.appendChild(paymentsTable);
+
+            // Tabela de Despesas
+            const expenseTableTitle = document.createElement('h3');
+            expenseTableTitle.className = "text-xl font-bold text-gray-800 my-4";
+            expenseTableTitle.textContent = "Despesas Registradas";
+            tableContent.appendChild(expenseTableTitle);
+
+            const expensesTable = document.createElement('table');
+            expensesTable.className = "min-w-full divide-y divide-gray-200 shadow-md rounded-lg overflow-hidden";
+            expensesTable.innerHTML = `
+                <thead class="bg-gray-50">
+                    <tr><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Descrição</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Valor</th><th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Ações</th></tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                </tbody>
+            `;
+
+            const expenseTableBody = expensesTable.querySelector('tbody');
+            if (monthData.expenses.length > 0) {
+                monthData.expenses.forEach(expense => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-50 transition-colors";
+                    const valor = formatCurrency(expense.valor);
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.descricao}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">${valor}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="deleteExpense('${expense.id}')" class="text-red-500 hover:text-red-700 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
+                    `;
+                    expenseTableBody.appendChild(row);
+                });
+            } else {
+                expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
+            }
+            tableContent.appendChild(expensesTable);
+
+            return tableContent;
         }
         
         // Função para renderizar o gráfico de barras da aba ativa
         function renderChartForTab(tabId) {
-            if (!isAuthReady) return;
+            if (!isAuthReady || !currentActiveYear) return;
             if (activeChart) {
                 activeChart.destroy();
             }
@@ -936,7 +962,7 @@
             const totalReceitaMensal = monthlyPayments.reduce((acc, p) => acc + p.valorReceita, 0);
             const totalDespesaMensal = monthlyExpenses.reduce((acc, e) => acc + e.valor, 0);
 
-            const canvas = document.getElementById(`chart-${monthYear.replace(/\s+/g, '-')}`);
+            const canvas = document.getElementById(`chart-${tabId}`);
             if (!canvas) {
                 return;
             }
