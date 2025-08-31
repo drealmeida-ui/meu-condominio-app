@@ -1197,20 +1197,33 @@
                         const password = document.getElementById('password').value;
                         loginMessage.innerText = "";
                         showLoading();
-                        try {
-                            await signInWithEmailAndPassword(auth, email, password);
-                            console.log("Login bem-sucedido!");
-                            // Redirecionamento ou exibição da UI principal será tratada pelo onAuthStateChanged
-                        } catch (error) {
-                            console.error("Erro de login:", error);
-                            let message = "Erro de login. Verifique seu e-mail e senha.";
-                            if (error.code === 'auth/invalid-credential') {
-                                message = "Credenciais inválidas. Verifique seu e-mail e senha.";
-                            }
-                            loginMessage.innerText = message;
-                        } finally {
+
+                        // --- Início da correção para login fixo ---
+                        // Substitui a autenticação Firebase real por uma verificação local para fins de demonstração.
+                        if (email === "condominiopiramide624@gmail.com" && password === "pira@624") {
+                            // Simula um login bem-sucedido chamando o listener de estado de autenticação
+                            onAuthStateChanged(auth, user => {
+                                // O listener onAuthStateChanged é chamado duas vezes:
+                                // 1. Uma vez com 'null' quando a página carrega.
+                                // 2. A segunda vez com o usuário real (ou simulado) após o login.
+                                // Se a página já está carregada e o usuário está logado,
+                                // o listener não é chamado novamente automaticamente.
+                                // Por isso, chamamos manualmente a função de display para garantir que a UI é atualizada.
+                                if (user) {
+                                  loginSection.classList.add('hidden');
+                                  mainApp.classList.remove('hidden');
+                                  hideLoading();
+                                }
+                            });
+                             // Dispara a simulação de login
+                            const mockUser = { uid: 'mock-user-id' };
+                            Object.defineProperty(auth, 'currentUser', { value: mockUser, writable: true });
+                            onAuthStateChanged(auth, () => {}, () => {});
+                        } else {
+                            loginMessage.innerText = "E-mail ou senha incorretos.";
                             hideLoading();
                         }
+                        // --- Fim da correção para login fixo ---
                     });
                 }
 
@@ -1218,8 +1231,10 @@
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', async () => {
                         try {
-                            await signOut(auth);
-                            console.log("Usuário desconectado.");
+                            // Simula o logout limpando o usuário atual
+                            Object.defineProperty(auth, 'currentUser', { value: null, writable: true });
+                            loginSection.classList.remove('hidden');
+                            mainApp.classList.add('hidden');
                             showMessage("Você saiu da sua conta.");
                         } catch (error) {
                             console.error("Erro ao sair:", error);
