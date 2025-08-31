@@ -154,6 +154,25 @@
 </head>
 <body class="bg-gray-100 p-4 sm:p-8">
 
+    <!-- Seção de Login - Visível por padrão -->
+    <div id="login-section" class="flex items-center justify-center min-h-screen bg-gray-100">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+            <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Acesso Restrito</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label for="email" class="block text-gray-700 font-semibold mb-2">E-mail</label>
+                    <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-gray-700 font-semibold mb-2">Senha</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">Entrar</button>
+            </form>
+            <p id="loginMessage" class="mt-4 text-center text-red-500"></p>
+        </div>
+    </div>
+
     <!-- Mensagem de carregamento e erro/sucesso -->
     <div id="loadingMessage" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
         <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-2xl">
@@ -170,13 +189,16 @@
         </div>
     </div>
     
-    <!-- Container Principal -->
-    <div class="container-card relative">
-        <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-center mb-2 text-shadow-custom">
-            Controle de Receita e Despesa
-        </h1>
+    <!-- Container Principal do Aplicativo - Escondido por padrão -->
+    <div id="main-app" class="container-card relative hidden">
+        <div class="flex justify-between items-center mb-4 no-print">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
+                Condomínio Pirâmide
+            </h1>
+            <button id="logoutBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors">Sair</button>
+        </div>
         <p class="text-lg text-gray-600 text-center mb-8">
-            Condomínio Pirâmide
+            Controle de Receita e Despesa
         </p>
 
         <!-- Seção de Resumo Total -->
@@ -415,7 +437,7 @@
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -453,11 +475,24 @@
         };
 
         let db;
+        let auth;
         let isAuthReady = false;
         let currentActiveTab = ''; // Variável para armazenar a aba ativa
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
+
+        // Elementos da UI
+        const loginSection = document.getElementById('login-section');
+        const mainApp = document.getElementById('main-app');
+        const loginForm = document.getElementById('loginForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const loginMessage = document.getElementById('loginMessage');
+        const paymentForm = document.getElementById('paymentForm');
+        const expenseForm = document.getElementById('expenseForm');
+        const tabsContainer = document.getElementById('tabsContainer');
+        const financialTableContainer = document.getElementById('financialTableContainer');
+        const noDataMessage = document.getElementById('noDataMessage');
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -509,11 +544,7 @@
 
         // Função para renderizar os dados financeiros (pagamentos e despesas)
         function renderFinancialData(payments, expenses) {
-            const noDataMessage = document.getElementById('noDataMessage');
-            const tabsContainer = document.getElementById('tabsContainer');
-            const tableContainer = document.getElementById('financialTableContainer');
-
-            if (!noDataMessage || !tabsContainer || !tableContainer) {
+            if (!noDataMessage || !tabsContainer || !financialTableContainer) {
                 console.error("Erro fatal: Elementos da UI não encontrados.");
                 showMessage("Erro de carregamento. Por favor, recarregue a página.", true);
                 return;
@@ -548,7 +579,7 @@
 
             // Limpa o conteúdo antes de renderizar
             tabsContainer.innerHTML = '';
-            tableContainer.innerHTML = '';
+            financialTableContainer.innerHTML = '';
 
             if (payments.length === 0 && expenses.length === 0) {
                 noDataMessage.classList.remove('hidden');
@@ -779,7 +810,7 @@
                     expenseTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma despesa registrada neste mês.</td></tr>`;
                 }
                 tableContent.appendChild(expensesTable);
-                tableContainer.appendChild(tableContent);
+                financialTableContainer.appendChild(tableContent);
             });
 
             // Ativa a aba salva, ou a primeira se não houver uma salva
@@ -798,7 +829,7 @@
             }
         }
         
-        // NOVO: Função para renderizar o gráfico de barras da aba ativa
+        // Função para renderizar o gráfico de barras da aba ativa
         function renderChartForTab(tabId) {
             // Destruir o gráfico anterior, se existir
             if (activeChart) {
@@ -876,7 +907,7 @@
             });
         }
         
-        // NOVO: Função para gerar o relatório do período
+        // Função para gerar o relatório do período
         function generateReport() {
             const startMonth = document.getElementById('startMonth').value;
             const startYear = parseInt(document.getElementById('startYear').value);
@@ -977,6 +1008,7 @@
                         y: { beginAtZero: true, ticks: { callback: (value) => formatCurrency(value) } },
                         x: { grid: { display: false } }
                     }
+                    
                 }
             });
         }
@@ -1147,7 +1179,7 @@
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
+                auth = getAuth(app);
                 db = getFirestore(app);
 
                 // Preenche os campos de ano com o ano atual
@@ -1157,12 +1189,52 @@
                 document.getElementById('startYear').value = currentYear;
                 document.getElementById('endYear').value = currentYear;
 
+                // Listener para o formulário de login
+                if (loginForm) {
+                    loginForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById('email').value;
+                        const password = document.getElementById('password').value;
+                        loginMessage.innerText = "";
+                        showLoading();
+                        try {
+                            await signInWithEmailAndPassword(auth, email, password);
+                            console.log("Login bem-sucedido!");
+                            // Redirecionamento ou exibição da UI principal será tratada pelo onAuthStateChanged
+                        } catch (error) {
+                            console.error("Erro de login:", error);
+                            let message = "Erro de login. Verifique seu e-mail e senha.";
+                            if (error.code === 'auth/invalid-credential') {
+                                message = "Credenciais inválidas. Verifique seu e-mail e senha.";
+                            }
+                            loginMessage.innerText = message;
+                        } finally {
+                            hideLoading();
+                        }
+                    });
+                }
+
+                // Listener para o botão de sair
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        try {
+                            await signOut(auth);
+                            console.log("Usuário desconectado.");
+                            showMessage("Você saiu da sua conta.");
+                        } catch (error) {
+                            console.error("Erro ao sair:", error);
+                            showMessage("Erro ao sair. Tente novamente.", true);
+                        }
+                    });
+                }
 
                 // Autentica o usuário e, após o login, inicia a escuta em tempo real
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         isAuthReady = true;
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
+                        loginSection.classList.add('hidden');
+                        mainApp.classList.remove('hidden');
                         showLoading();
 
                         // Listener para pagamentos
@@ -1177,7 +1249,7 @@
                             hideLoading();
                         });
 
-                        // NOVO: Listener para despesas
+                        // Listener para despesas
                         const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
                         onSnapshot(expensesCol, (snapshot) => {
                             allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1190,21 +1262,17 @@
                         });
 
                     } else {
-                        console.log("Usuário não autenticado. Iniciando o processo de login.");
-                        if (initialAuthToken) {
-                            try {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                            } catch (e) {
-                                console.error("Erro ao autenticar com token:", e);
-                                showMessage("Erro de autenticação. Verifique as configurações.", true);
-                            }
-                        } else {
-                            await signInAnonymously(auth);
+                        console.log("Usuário não autenticado.");
+                        loginSection.classList.remove('hidden');
+                        mainApp.classList.add('hidden');
+
+                        // Se não houver token inicial, tenta login anônimo para manter a compatibilidade com o ambiente do Canvas
+                        if (!initialAuthToken) {
+                             await signInAnonymously(auth);
                         }
                     }
                 });
 
-                const paymentForm = document.getElementById('paymentForm');
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
@@ -1239,7 +1307,6 @@
                     console.error("Elemento paymentForm não encontrado. O listener não foi anexado.");
                 }
 
-                const expenseForm = document.getElementById('expenseForm');
                 if (expenseForm) {
                     expenseForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
