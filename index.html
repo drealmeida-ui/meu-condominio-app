@@ -157,9 +157,7 @@
     <!-- Seção de Login - Visível por padrão -->
     <div id="login-section" class="flex items-center justify-center min-h-screen bg-gray-100">
         <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-            <!-- NOVO: Logo na página de login -->
-            <!-- Substitua esta URL pela sua própria URL da logo. -->
-            <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-48 mx-auto mb-4 border-2 border-blue-200 rounded-lg" />
+            <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24 mx-auto mb-4" />
             
             <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Acesso Restrito</h2>
             <form id="loginForm">
@@ -213,8 +211,7 @@
         <div class="flex items-center mb-4 no-print">
             <!-- NOVO: Container para logo e título centralizados juntos -->
             <div class="flex-1 flex items-center justify-center space-x-4">
-                <!-- Substitua esta URL pela sua própria URL da logo. -->
-                <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24 border-2 border-blue-200 rounded-lg" />
+                <img src="https://res.cloudinary.com/dxqebyuhs/image/upload/v1756604562/barirao_store_1_tmgeyc.png" alt="Logo do Condomínio" class="w-24" />
                 <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 text-shadow-custom">
                     Condomínio Pirâmide
                 </h1>
@@ -461,7 +458,7 @@
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -1088,6 +1085,34 @@
             hideLoading();
         }
 
+        // NOVO: Função para inicializar os listeners de dados
+        function initializeDataListeners() {
+            if (dataListenersInitialized) return;
+            dataListenersInitialized = true;
+
+            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+            const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+
+            // Listener em tempo real para pagamentos
+            onSnapshot(paymentsCol, (snapshot) => {
+                allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAllData();
+            }, (error) => {
+                console.error("Erro no listener de pagamentos:", error);
+                showMessage("Erro ao carregar pagamentos.", true);
+            });
+
+            // Listener em tempo real para despesas
+            onSnapshot(expensesCol, (snapshot) => {
+                allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAllData();
+            }, (error) => {
+                console.error("Erro no listener de despesas:", error);
+                showMessage("Erro ao carregar despesas.", true);
+            });
+        }
+
+
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
@@ -1118,3 +1143,205 @@
             } finally {
                 hideLoading();
             }
+        }
+
+        // Função para registrar uma nova despesa no banco de dados
+        async function addExpense(expenseData) {
+            try {
+                showLoading();
+                const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+                await addDoc(expensesCol, expenseData);
+                console.log("Documento de despesa adicionado com sucesso.");
+                showMessage("Despesa registrada com sucesso!");
+            } catch (error) {
+                console.error("Erro ao adicionar documento de despesa:", error);
+                showMessage("Erro ao registrar a despesa. Tente novamente.", true);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Funções globais para deleção (acessíveis pelo HTML)
+        window.deletePayment = async (id) => {
+            try {
+                showLoading();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/payments`, id));
+                console.log("Pagamento excluído com sucesso.");
+                showMessage("Pagamento excluído com sucesso!");
+            } catch (error) {
+                console.error("Erro ao excluir pagamento:", error);
+                showMessage("Erro ao excluir o pagamento.", true);
+            } finally {
+                hideLoading();
+            }
+        };
+
+        window.deleteExpense = async (id) => {
+            try {
+                showLoading();
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/expenses`, id));
+                console.log("Despesa excluída com sucesso.");
+                showMessage("Despesa excluída com sucesso!");
+            } catch (error) {
+                console.error("Erro ao excluir despesa:", error);
+                showMessage("Erro ao excluir a despesa.", true);
+            } finally {
+                hideLoading();
+            }
+        };
+
+        // Manipuladores de eventos
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializa o Firebase
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug');
+            } catch (error) {
+                console.error("Erro ao inicializar Firebase:", error);
+                showMessage("Erro ao carregar o aplicativo. Verifique a configuração do Firebase.", true);
+                return;
+            }
+            
+            // NOVO: Adiciona um listener para a mudança de estado de autenticação
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    console.log("Usuário autenticado:", user.email);
+                    loginSection.classList.add('hidden');
+                    mainApp.classList.remove('hidden');
+                    if (!dataListenersInitialized) {
+                        initializeDataListeners();
+                    }
+                } else {
+                    console.log("Usuário deslogado.");
+                    loginSection.classList.remove('hidden');
+                    mainApp.classList.add('hidden');
+                }
+                isAuthReady = true;
+            });
+            
+            // NOVO: Manipulador de submissão do formulário de login com try/catch
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                showLoading();
+                const email = loginForm.email.value;
+                const password = loginForm.password.value;
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    showMessage("Login realizado com sucesso!", false);
+                } catch (error) {
+                    console.error("Erro no login:", error);
+                    let message = "Erro no login. Verifique suas credenciais.";
+                    if (error.code === 'auth/user-not-found') {
+                        message = "Usuário não encontrado.";
+                    } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        message = "Senha incorreta.";
+                    }
+                    showMessage(message, true);
+                } finally {
+                    hideLoading();
+                }
+            });
+
+            // Lógica do botão de logout
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await signOut(auth);
+                    showMessage("Você foi desconectado.", false);
+                } catch (error) {
+                    console.error("Erro ao fazer logout:", error);
+                    showMessage("Erro ao desconectar.", true);
+                }
+            });
+
+            // Lógica de mostrar/esconder senha
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const eyeIconOpen = document.getElementById('eyeIconOpen');
+            const eyeIconClosed = document.getElementById('eyeIconClosed');
+            togglePassword.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                eyeIconOpen.classList.toggle('hidden');
+                eyeIconClosed.classList.toggle('hidden');
+            });
+
+            // Manipulador de submissão do formulário de pagamento
+            paymentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!isAuthReady) {
+                    showMessage("Aguarde, autenticando...", true);
+                    return;
+                }
+                const unitNumber = paymentForm.unitNumber.value;
+                const unitType = paymentForm.unitType.value;
+                const paymentType = paymentForm.paymentType.value;
+                const paymentMonth = paymentForm.paymentMonth.value;
+                const paymentYear = parseInt(paymentForm.paymentYear.value);
+                const rateioPaid = paymentForm.rateioPaid.checked;
+
+                const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
+                const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+
+                const paymentData = {
+                    unidade: unitNumber,
+                    tipoUnidade: unitType,
+                    tipoPagamento: paymentType,
+                    mes: paymentMonth,
+                    ano: paymentYear,
+                    valorReceita: valorReceita,
+                    valorRateio: valorRateio
+                };
+
+                addPayment(paymentData);
+                paymentForm.reset();
+            });
+
+            // Manipulador de submissão do formulário de despesa
+            expenseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!isAuthReady) {
+                    showMessage("Aguarde, autenticando...", true);
+                    return;
+                }
+                const expenseDescription = expenseForm.expenseDescription.value;
+                const expenseValue = parseFloat(expenseForm.expenseValue.value);
+                const expenseMonth = expenseForm.expenseMonth.value;
+                const expenseYear = parseInt(expenseForm.expenseYear.value);
+
+                const expenseData = {
+                    descricao: expenseDescription,
+                    valor: expenseValue,
+                    mes: expenseMonth,
+                    ano: expenseYear
+                };
+
+                addExpense(expenseData);
+                expenseForm.reset();
+            });
+            
+            // Manipulador do botão e formulário do relatório
+            const reportModal = document.getElementById('reportModal');
+            document.getElementById('openReportModalBtn').addEventListener('click', () => {
+                reportModal.classList.remove('hidden');
+            });
+            document.getElementById('closeReportModalBtn').addEventListener('click', () => {
+                reportModal.classList.add('hidden');
+            });
+            document.getElementById('reportForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                generateReport();
+            });
+            
+            // Setar o ano atual nos formulários
+            const currentYear = new Date().getFullYear();
+            document.getElementById('paymentYear').value = currentYear;
+            document.getElementById('expenseYear').value = currentYear;
+            document.getElementById('startYear').value = currentYear;
+            document.getElementById('endYear').value = currentYear;
+        });
+
+    </script>
+</body>
+</html>
