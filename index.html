@@ -437,7 +437,7 @@
     <script type="module">
         // Importa as dependências do Firebase na versão mais estável
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -451,7 +451,6 @@
           appId: "1:753496447014:web:aa9cde68924dc445466ee7"
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Dados de precificação e contagem total de unidades
         const PRECOS = {
@@ -493,6 +492,9 @@
         const tabsContainer = document.getElementById('tabsContainer');
         const financialTableContainer = document.getElementById('financialTableContainer');
         const noDataMessage = document.getElementById('noDataMessage');
+
+        // Flag para garantir que os listeners de dados só sejam inicializados uma vez
+        let dataListenersInitialized = false;
 
         // Exibe uma mensagem de feedback na tela (sucesso ou erro)
         function showMessage(message, isError = false) {
@@ -1174,8 +1176,44 @@
             });
         }
         
+        // NOVO: Função para inicializar os listeners do Firestore somente após o login
+        function initializeDataListeners() {
+            if (dataListenersInitialized) {
+                console.log("Listeners de dados já inicializados. Ignorando...");
+                return;
+            }
+            
+            console.log("Inicializando os listeners de dados do Firestore.");
+
+            // Listener para pagamentos
+            const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
+            onSnapshot(paymentsCol, (snapshot) => {
+                allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
+                renderAllData();
+            }, (error) => {
+                console.error("Erro ao ouvir atualizações de pagamentos:", error);
+                showMessage("Erro de sincronização com o banco de dados.", true);
+                hideLoading();
+            });
+
+            // Listener para despesas
+            const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
+            onSnapshot(expensesCol, (snapshot) => {
+                allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
+                renderAllData();
+            }, (error) => {
+                console.error("Erro ao ouvir atualizações de despesas:", error);
+                showMessage("Erro de sincronização com o banco de dados.", true);
+                hideLoading();
+            });
+
+            dataListenersInitialized = true;
+        }
+
         // Função principal que inicializa o aplicativo
-        async function main() {
+        function main() {
             try {
                 setLogLevel('debug');
                 const app = initializeApp(firebaseConfig);
@@ -1198,43 +1236,47 @@
                         loginMessage.innerText = "";
                         showLoading();
 
-                        // --- Início da correção para login fixo ---
-                        // Substitui a autenticação Firebase real por uma verificação local para fins de demonstração.
-                        if (email === "condominiopiramide624@gmail.com" && password === "pira@624") {
-                            // Simula um login bem-sucedido chamando o listener de estado de autenticação
-                            onAuthStateChanged(auth, user => {
-                                // O listener onAuthStateChanged é chamado duas vezes:
-                                // 1. Uma vez com 'null' quando a página carrega.
-                                // 2. A segunda vez com o usuário real (ou simulado) após o login.
-                                // Se a página já está carregada e o usuário está logado,
-                                // o listener não é chamado novamente automaticamente.
-                                // Por isso, chamamos manualmente a função de display para garantir que a UI é atualizada.
-                                if (user) {
-                                  loginSection.classList.add('hidden');
-                                  mainApp.classList.remove('hidden');
-                                  hideLoading();
-                                }
-                            });
-                             // Dispara a simulação de login
-                            const mockUser = { uid: 'mock-user-id' };
-                            Object.defineProperty(auth, 'currentUser', { value: mockUser, writable: true });
-                            onAuthStateChanged(auth, () => {}, () => {});
-                        } else {
-                            loginMessage.innerText = "E-mail ou senha incorretos.";
+                        try {
+                            // Tenta autenticar com as credenciais fornecidas
+                            await signInWithEmailAndPassword(auth, email, password);
+                            
+                            // Se o login for bem-sucedido, esconde a tela de login e mostra o app
+                            console.log("Login bem-sucedido.");
+                            loginSection.classList.add('hidden');
+                            mainApp.classList.remove('hidden');
+                            initializeDataListeners(); // Agora inicializamos os listeners de dados AQUI
+                            hideLoading();
+
+                        } catch (error) {
+                            console.error("Erro de login:", error);
+                            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
+                            let errorMessage = "Erro ao fazer login. Por favor, tente novamente.";
+                            switch (error.code) {
+                                case 'auth/wrong-password':
+                                case 'auth/user-not-found':
+                                case 'auth/invalid-credential':
+                                    errorMessage = "E-mail ou senha incorretos.";
+                                    break;
+                                default:
+                                    errorMessage = "Erro desconhecido. Por favor, verifique sua conexão.";
+                                    break;
+                            }
+                            loginMessage.innerText = errorMessage;
                             hideLoading();
                         }
-                        // --- Fim da correção para login fixo ---
                     });
+                } else {
+                    console.error("Elemento loginForm não encontrado.");
                 }
 
                 // Listener para o botão de sair
                 if (logoutBtn) {
                     logoutBtn.addEventListener('click', async () => {
                         try {
-                            // Simula o logout limpando o usuário atual
-                            Object.defineProperty(auth, 'currentUser', { value: null, writable: true });
+                            await signOut(auth); // Desconecta do Firebase
                             loginSection.classList.remove('hidden');
                             mainApp.classList.add('hidden');
+                            loginMessage.innerText = "";
                             showMessage("Você saiu da sua conta.");
                         } catch (error) {
                             console.error("Erro ao sair:", error);
@@ -1243,65 +1285,17 @@
                     });
                 }
 
-                // Autentica o usuário e, após o login, inicia a escuta em tempo real
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        isAuthReady = true;
-                        console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
-                        loginSection.classList.add('hidden');
-                        mainApp.classList.remove('hidden');
-                        showLoading();
-
-                        // Listener para pagamentos
-                        const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
-                        onSnapshot(paymentsCol, (snapshot) => {
-                            allPayments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            console.log("Dados de pagamento recebidos em tempo real. Total:", allPayments.length);
-                            renderAllData(); // Chamada para renderizar
-                        }, (error) => {
-                            console.error("Erro ao ouvir atualizações de pagamentos:", error);
-                            showMessage("Erro de sincronização com o banco de dados.", true);
-                            hideLoading();
-                        });
-
-                        // Listener para despesas
-                        const expensesCol = collection(db, `artifacts/${appId}/public/data/expenses`);
-                        onSnapshot(expensesCol, (snapshot) => {
-                            allExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                            console.log("Dados de despesa recebidos em tempo real. Total:", allExpenses.length);
-                            renderAllData(); // Chamada para renderizar
-                        }, (error) => {
-                            console.error("Erro ao ouvir atualizações de despesas:", error);
-                            showMessage("Erro de sincronização com o banco de dados.", true);
-                            hideLoading();
-                        });
-
-                    } else {
-                        console.log("Usuário não autenticado.");
-                        loginSection.classList.remove('hidden');
-                        mainApp.classList.add('hidden');
-
-                        // Se não houver token inicial, tenta login anônimo para manter a compatibilidade com o ambiente do Canvas
-                        if (!initialAuthToken) {
-                             await signInAnonymously(auth);
-                        }
-                    }
-                });
-
                 if (paymentForm) {
                     paymentForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
-
                         const unitNumber = document.getElementById('unitNumber').value;
                         const unitType = document.getElementById('unitType').value;
                         const paymentType = document.getElementById('paymentType').value;
                         const paymentMonth = document.getElementById('paymentMonth').value;
                         const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
-
                         const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
                         const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
-
                         const newPayment = {
                             unidade: unitNumber,
                             tipoUnidade: unitType,
@@ -1312,9 +1306,7 @@
                             valorRateio: valorRateio,
                             dataRegistro: new Date()
                         };
-
                         await addPayment(newPayment);
-
                         paymentForm.reset();
                         document.getElementById('paymentYear').value = new Date().getFullYear();
                     });
@@ -1325,12 +1317,10 @@
                 if (expenseForm) {
                     expenseForm.addEventListener('submit', async (e) => {
                         e.preventDefault();
-
                         const description = document.getElementById('expenseDescription').value;
                         const value = parseFloat(document.getElementById('expenseValue').value);
                         const month = document.getElementById('expenseMonth').value;
                         const year = parseInt(document.getElementById('expenseYear').value);
-
                         const newExpense = {
                             descricao: description,
                             valor: value,
@@ -1338,9 +1328,7 @@
                             ano: year,
                             dataRegistro: new Date()
                         };
-
                         await addExpense(newExpense);
-
                         expenseForm.reset();
                         document.getElementById('expenseYear').value = new Date().getFullYear();
                     });
