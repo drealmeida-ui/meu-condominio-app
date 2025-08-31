@@ -254,6 +254,51 @@
             </button>
         </div>
 
+        <!-- NOVO: Formulário de Configurações de Preços -->
+        <div class="no-print bg-blue-50 p-6 rounded-xl border-2 border-blue-200 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Configurações de Preços</h2>
+            <form id="pricingForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div class="lg:col-span-4">
+                    <p class="text-gray-600 mb-2 font-semibold">Defina as taxas e descontos para cada tipo de unidade:</p>
+                </div>
+                <!-- Apartamento -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <label class="block text-gray-700 font-semibold mb-2">Apartamento</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="aptoTaxa" placeholder="Taxa Normal" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <input type="number" id="aptoDesconto" placeholder="Desconto" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    </div>
+                </div>
+                <!-- Kitnet -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <label class="block text-gray-700 font-semibold mb-2">Kitnet</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="kitnetTaxa" placeholder="Taxa Normal" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <input type="number" id="kitnetDesconto" placeholder="Desconto" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    </div>
+                </div>
+                <!-- Sala Comercial -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <label class="block text-gray-700 font-semibold mb-2">Sala Comercial</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="salaTaxa" placeholder="Taxa Normal" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                        <input type="number" id="salaDesconto" placeholder="Desconto" step="0.01" class="w-1/2 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                    </div>
+                </div>
+                <!-- Preço do Rateio -->
+                <div class="md:col-span-2 lg:col-span-1">
+                    <label class="block text-gray-700 font-semibold mb-2">Rateio</label>
+                    <input type="number" id="rateioPreco" placeholder="Valor do Rateio" step="0.01" class="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                </div>
+                <div class="lg:col-span-4">
+                    <button type="submit" class="w-full px-6 py-3 mt-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg transform hover:scale-105">
+                        Salvar Configurações
+                    </button>
+                </div>
+            </form>
+        </div>
+
+
         <!-- Formulário para Registrar Pagamentos -->
         <div class="no-print bg-gray-50 p-6 rounded-xl border-2 border-gray-200 mb-8">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Registrar Pagamento</h2>
@@ -464,7 +509,7 @@
         // Importa as dependências do Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Variáveis de ambiente fornecidas pelo Canvas
@@ -478,34 +523,35 @@
         };
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // Dados de precificação e contagem total de unidades
-        const PRECOS = {
-            "Apartamento": { normal: 629.00, a_vista: 629.00 - 28.88 },
-            "Kitnet": { normal: 524.51, a_vista: 524.51 - 25.89 },
-            "Sala Comercial": { normal: 268.31, a_vista: 268.31 - 17.66 }
-        };
-        const PRECO_RATEIO = 137.70;
+        // Constantes do projeto (não dinâmicas)
         const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
         const TOTAL_UNITS = {
             "Apartamento": 38,
             "Kitnet": 10,
             "Sala Comercial": 16
         };
-        
         const unitTypeDisplay = {
           "Apartamento": "Apto.",
           "Kitnet": "Kitnet",
           "Sala Comercial": "Sala"
         };
-
+        
+        // Variáveis de estado global que serão sincronizadas com o Firestore
         let db;
         let isAuthReady = false;
-        let currentActiveTab = ''; // Variável para armazenar a aba ativa
+        let currentActiveTab = ''; 
         let allPayments = [];
         let allExpenses = [];
         let activeChart = null;
-        let auth; // Declarado aqui para ser acessível globalmente
+        let auth; 
+        
+        // NOVO: Variável para armazenar as configurações dinâmicas
+        let dynamicPricing = {
+            "Apartamento": { normal: 0, desconto: 0 },
+            "Kitnet": { normal: 0, desconto: 0 },
+            "Sala Comercial": { normal: 0, desconto: 0 },
+            "rateio": 0
+        };
 
         // Função para alternar a visibilidade da senha
         window.togglePasswordVisibility = function() {
@@ -1095,6 +1141,35 @@
             hideLoading();
         }
 
+        // NOVO: Função para salvar as configurações de preço no Firestore
+        async function savePricingConfig(configData) {
+            try {
+                showLoading();
+                const configDocRef = doc(db, `artifacts/${appId}/public/data/pricing_config/main`);
+                await setDoc(configDocRef, configData);
+                console.log("Configurações de preço salvas com sucesso!");
+                showMessage("Configurações salvas com sucesso!");
+            } catch (error) {
+                console.error("Erro ao salvar configurações de preço:", error);
+                showMessage("Erro ao salvar as configurações. Tente novamente.", true);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // NOVO: Função para carregar as configurações de preço no UI
+        function loadPricingConfigToUI(configData) {
+            if (configData) {
+                document.getElementById('aptoTaxa').value = configData["Apartamento"].normal;
+                document.getElementById('aptoDesconto').value = configData["Apartamento"].desconto;
+                document.getElementById('kitnetTaxa').value = configData["Kitnet"].normal;
+                document.getElementById('kitnetDesconto').value = configData["Kitnet"].desconto;
+                document.getElementById('salaTaxa').value = configData["Sala Comercial"].normal;
+                document.getElementById('salaDesconto').value = configData["Sala Comercial"].desconto;
+                document.getElementById('rateioPreco').value = configData.rateio;
+            }
+        }
+
         // Função para registrar um novo pagamento no banco de dados
         async function addPayment(paymentData) {
             try {
@@ -1236,6 +1311,22 @@
                         console.log("Usuário autenticado. Iniciando a escuta em tempo real.");
                         showLoading();
 
+                        // NOVO: Listener para as configurações de preço
+                        const configDocRef = doc(db, `artifacts/${appId}/public/data/pricing_config/main`);
+                        onSnapshot(configDocRef, (doc) => {
+                            if (doc.exists()) {
+                                dynamicPricing = doc.data();
+                                console.log("Configurações de preço recebidas em tempo real:", dynamicPricing);
+                                loadPricingConfigToUI(dynamicPricing);
+                            } else {
+                                console.log("Nenhuma configuração de preço encontrada. Usando valores padrão.");
+                                // Você pode definir valores padrão aqui se desejar
+                            }
+                        }, (error) => {
+                            console.error("Erro ao ouvir configurações de preço:", error);
+                            showMessage("Erro ao carregar configurações de preço.", true);
+                        });
+
                         // Listener para pagamentos
                         const paymentsCol = collection(db, `artifacts/${appId}/public/data/payments`);
                         onSnapshot(paymentsCol, (snapshot) => {
@@ -1301,6 +1392,41 @@
                     console.error("Elemento loginForm não encontrado.");
                 }
 
+                // NOVO: Listener para o formulário de configurações
+                const pricingForm = document.getElementById('pricingForm');
+                if (pricingForm) {
+                    pricingForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const newConfig = {
+                            "Apartamento": {
+                                normal: parseFloat(document.getElementById('aptoTaxa').value),
+                                desconto: parseFloat(document.getElementById('aptoDesconto').value)
+                            },
+                            "Kitnet": {
+                                normal: parseFloat(document.getElementById('kitnetTaxa').value),
+                                desconto: parseFloat(document.getElementById('kitnetDesconto').value)
+                            },
+                            "Sala Comercial": {
+                                normal: parseFloat(document.getElementById('salaTaxa').value),
+                                desconto: parseFloat(document.getElementById('salaDesconto').value)
+                            },
+                            "rateio": parseFloat(document.getElementById('rateioPreco').value)
+                        };
+                        // Verifica se os valores são números válidos antes de salvar
+                        for(const type in newConfig) {
+                          if(type !== 'rateio' && (isNaN(newConfig[type].normal) || isNaN(newConfig[type].desconto))) {
+                            showMessage("Por favor, preencha todos os campos de taxa com valores válidos.", true);
+                            return;
+                          }
+                        }
+                        if (isNaN(newConfig.rateio)) {
+                          showMessage("Por favor, preencha o valor do rateio com um valor válido.", true);
+                          return;
+                        }
+                        await savePricingConfig(newConfig);
+                    });
+                }
+
                 // NOVO: Listener para o botão de sair (logout)
                 const logoutBtn = document.getElementById('logoutBtn');
                 if (logoutBtn) {
@@ -1326,8 +1452,12 @@
                         const paymentMonth = document.getElementById('paymentMonth').value;
                         const paymentYear = parseInt(document.getElementById('paymentYear').value);
                         const rateioPaid = document.getElementById('rateioPaid').checked;
-                        const valorReceita = PRECOS[unitType][paymentType === 'A_Vista' ? 'a_vista' : 'normal'];
-                        const valorRateio = rateioPaid ? PRECO_RATEIO : 0;
+                        
+                        // NOVO: Utiliza os valores dinâmicos do dynamicPricing
+                        const unitPricing = dynamicPricing[unitType];
+                        const valorReceita = paymentType === 'A_Vista' ? (unitPricing.normal - unitPricing.desconto) : unitPricing.normal;
+                        const valorRateio = rateioPaid ? dynamicPricing.rateio : 0;
+                        
                         const newPayment = {
                             unidade: unitNumber,
                             tipoUnidade: unitType,
