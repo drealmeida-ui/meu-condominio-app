@@ -898,7 +898,7 @@
             tableContent.id = tabId;
             tableContent.className = "tab-content hidden";
             
-            const monthlyBalance = totalReceitaMensal + totalRateioMensal - totalDespesaMensal;
+            const monthlyBalance = totalReceitaMensal - totalDespesaMensal;
             const balanceColor = monthlyBalance >= 0 ? 'text-green-600' : 'text-red-600';
 
             const totalsDiv = document.createElement('div');
@@ -1124,7 +1124,7 @@
             const totalReceita = filteredPayments.reduce((sum, p) => sum + p.valorReceita, 0);
             const totalRateio = filteredPayments.reduce((sum, p) => sum + p.valorRateio, 0);
             const totalDespesa = filteredExpenses.reduce((sum, e) => sum + e.valor, 0);
-            const totalGeral = totalReceita + totalRateio - totalDespesa;
+            const totalGeral = totalReceita - totalDespesa;
 
             const balanceColor = totalGeral >= 0 ? 'text-green-600' : 'text-red-600';
             const reportContent = document.getElementById('reportContent');
@@ -1218,7 +1218,7 @@
                 totalDespesa += expense.valor;
             });
 
-            const totalGeral = totalReceita + totalRateio - totalDespesa;
+            const totalGeral = totalReceita - totalDespesa;
 
             // Atualiza o texto dos elementos
             totalReceitaElement.innerText = formatCurrency(totalReceita);
